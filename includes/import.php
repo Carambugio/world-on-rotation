@@ -113,6 +113,68 @@ function wor_import_countries( $cguides, $links, $overwrite = false ) {
 }
 
 /**
+ * Bring country guides up to date with the bundled data after a plugin update,
+ * without touching guides that were edited in the dashboard.
+ *
+ * Each guide remembers a fingerprint of the bundled text it came from and of what was saved.
+ * A guide is updated only when the bundled text has changed and the saved guide is still
+ * exactly as the plugin left it. Names in $force are updated regardless (one-off fixes).
+ */
+function wor_sync_bundled_countries( $force = array() ) {
+	$guides = wor_json( 'country_info.json' );
+	$links  = wor_json( 'links.json' );
+	$n      = 0;
+	foreach ( (array) $guides as $name => $g ) {
+		if ( ! is_array( $g ) || ! isset( $g['map'] ) ) {
+			continue;
+		}
+		$id = wor_find( 'wor_country', wor_slugify( $name ) );
+		if ( ! $id ) {
+			continue;
+		}
+		$content = implode( "\n\n", array_map( 'wp_kses_post', (array) $g['map'] ) );
+		$meta    = array_map( 'wp_kses_post', wor_country_meta( $g, $links ) );
+		$src     = md5( wp_json_encode( array( $content, $meta ) ) );
+		$old_src = get_post_meta( $id, '_wor_bundle_src', true );
+		$saved   = get_post_meta( $id, '_wor_bundle_saved', true );
+		$now     = wor_country_state( $id, array_keys( $meta ) );
+		$forced  = in_array( $name, (array) $force, true );
+		if ( ! $forced && $old_src === $src ) {
+			continue;
+		}
+		if ( ! $forced && ! $saved ) {
+			// First run: take the guide as it stands as the plugin's own version.
+			update_post_meta( $id, '_wor_bundle_src', $src );
+			update_post_meta( $id, '_wor_bundle_saved', $now );
+			continue;
+		}
+		if ( ! $forced && $now !== $saved ) {
+			continue; // Edited in the dashboard: leave it alone.
+		}
+		wp_update_post( wp_slash( array( 'ID' => $id, 'post_content' => $content ) ) );
+		foreach ( $meta as $k => $v ) {
+			update_post_meta( $id, '_wor_' . $k, $v );
+		}
+		clean_post_cache( $id );
+		update_post_meta( $id, '_wor_bundle_src', $src );
+		update_post_meta( $id, '_wor_bundle_saved', wor_country_state( $id, array_keys( $meta ) ) );
+		$n++;
+	}
+	wor_flush_cache();
+	return $n;
+}
+
+/** Fingerprint of a country guide as it is saved now. */
+function wor_country_state( $id, $keys ) {
+	$p    = get_post( $id );
+	$vals = array();
+	foreach ( $keys as $k ) {
+		$vals[ $k ] = get_post_meta( $id, '_wor_' . $k, true );
+	}
+	return md5( wp_json_encode( array( $p ? $p->post_content : '', $vals ) ) );
+}
+
+/**
  * Add place guides from a file. Each place needs a country and coordinates.
  * Returns array( added_or_updated, skipped_names ).
  */
@@ -259,15 +321,10 @@ function wor_import_all() {
 		$count['mixes'] += $new ? 1 : 0;
 	}
 
-	// About page.
-	if ( ! get_page_by_path( 'about' ) ) {
-		$about = '<p class="lede">World on Rotation pins mixes and playlists to the places they come from: big cities, small towns and villages, whole regions and whole countries. Spin the globe, pick a place and press play on something put together by a selector, DJ or curator who knows its music.</p>'
-			. "\n\n<p>Every mix and playlist is chosen by a person, not an algorithm. Mixes play through Mixcloud and playlists through the service they are built on, so the rights holders are paid. Each place and country also has a guide to its music: the styles it gave the world, the artists born there and the ones who made it home, and where to hear live music, buy records and tune in.</p>"
-			. "\n\n<p>Every place you play adds a stamp to your passport. World on Rotation is a Rhythm Passport project, run from London.</p>"
-			. "\n\n<p class=\"note\">Apart from Marco Canepari, the selectors, mixes and playlists are sample placeholders for now, and most players use one demo mix until the real links are added.</p>"
-			. "\n\n<p class=\"credits\">Globe built with globe.gl and d3 · map data Natural Earth · Earth imagery NASA.</p>";
-		wp_insert_post( array( 'post_type' => 'page', 'post_title' => 'About', 'post_name' => 'about', 'post_content' => $about, 'post_status' => 'publish' ) );
-		$count['pages']++;
+	// About, Privacy policy and Cookies pages.
+	if ( function_exists( 'wor_create_pages' ) ) {
+		wor_create_pages();
+		$count['pages'] += 3;
 	}
 
 	update_option( 'wor_imported', current_time( 'mysql' ) );

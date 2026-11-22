@@ -53,6 +53,15 @@ function wor_maybe_upgrade() {
 			wor_refresh_bundled_countries();
 			update_option( 'wor_guides_130', 1 );
 		}
+		if ( get_option( 'wor_imported' ) && function_exists( 'wor_sync_bundled_countries' ) ) {
+			// 1.3.1 added Yunnan to the China guide.
+			$force = get_option( 'wor_guides_131' ) ? array() : array( 'China' );
+			wor_sync_bundled_countries( $force );
+			update_option( 'wor_guides_131', 1 );
+		}
+		if ( get_option( 'wor_imported' ) && function_exists( 'wor_create_pages' ) ) {
+			wor_create_pages();
+		}
 		update_option( 'wor_version', WOR_VERSION );
 		flush_rewrite_rules();
 	}

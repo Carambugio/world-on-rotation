@@ -22,10 +22,11 @@ if ( wort_need_plugin() ) :
 <article class="sheet datapage">
 	<div class="sheet-top"><span>Rhythm Passport · Selector</span><span><?php echo esc_html( $wort_no ); ?></span></div>
 	<div class="dp">
-		<div class="dp-photo" aria-hidden="true"><?php echo esc_html( $wort_init ); ?></div>
+		<div class="dp-photo<?php echo $wort_comp['photo'] ? ' has-img' : ''; ?>" aria-hidden="true"><?php echo $wort_comp['photo'] ? '<img src="' . esc_url( $wort_comp['photo'] ) . '" alt="">' : esc_html( $wort_init ); ?></div>
 		<dl class="fields dp-fields">
 			<div class="dp-name"><dt>Selector</dt><dd><?php echo esc_html( $wort_comp['name'] ); ?></dd></div>
 			<div><dt>Based in</dt><dd><?php echo esc_html( $wort_comp['base'] ); ?></dd></div>
+			<?php if ( ! empty( $wort_comp['nationality'] ) ) : ?><div><dt>Nationality</dt><dd><?php echo esc_html( $wort_comp['nationality'] ); ?></dd></div><?php endif; ?>
 			<div><dt>Selector since</dt><dd><?php echo esc_html( wort_datel( $wort_since ) ); ?></dd></div>
 			<div><dt>Role</dt><dd><?php echo esc_html( $wort_comp['role'] ); ?></dd></div>
 			<div><dt>Issued by</dt><dd>Rhythm Passport<?php echo $wort_comp['sample'] ? ' · sample profile' : ''; ?></dd></div>

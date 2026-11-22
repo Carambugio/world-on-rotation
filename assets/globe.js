@@ -105,7 +105,9 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .htmlElement(labelEl).htmlElementVisibilityModifier((el, vis) => { el.style.opacity = vis ? 1 : 0; el.style.pointerEvents = vis ? "" : "none"; const s = el.firstChild; if(s) s.style.pointerEvents = vis ? "auto" : "none"; })
 ;
 let labelClickAt = 0;
-function countryAt(lat, lng){ if(performance.now() - labelClickAt < 500) return; const k = COUNTRY.find(c => d3.geoContains(c.feat, [lng, lat])); if(k) openCountry(k); }
+function countryAt(lat, lng){ if(performance.now() - labelClickAt < 500) return; const k = COUNTRY.find(c => d3.geoContains(c.feat, [lng, lat])); if(k) openCountry(k); else closeOnEmpty(); }
+/* A tap on the sea, or on the space around the globe, closes an open country or place */
+function closeOnEmpty(){ if(isOpen() && (activeCountry || activeCity)) closePanel(); }
 /* Our own click detection: the globe library drops a click if the mouse moves even one pixel while pressed,
    so taps often needed two or three goes. Here a click is anything that moves less than 8px. */
 (function globeTaps(){
@@ -120,7 +122,7 @@ function countryAt(lat, lng){ if(performance.now() - labelClickAt < 500) return;
     const pov = world.pointOfView(), centre = [pov.lng, pov.lat]; let best = null, bd = 16;
     for(const c of CITIES){ if(d3.geoDistance([c.lon, c.lat], centre) > Math.PI/2) continue; const sp = world.getScreenCoords(c.lat, c.lon, 0.003); const dd = Math.hypot(sp.x - x, sp.y - y); if(dd < bd){ bd = dd; best = c; } }
     if(best){ openCity(best.city); return; }
-    const g = world.toGlobeCoords(x, y); if(g) countryAt(g.lat, g.lng);
+    const g = world.toGlobeCoords(x, y); if(g) countryAt(g.lat, g.lng); else closeOnEmpty();
   });
 })();
 
@@ -201,7 +203,7 @@ let labelKey = "", cityLabelSize = 0.55;
 function refreshLabels(){
   const alt = world.pointOfView().altitude, key = Math.round(Math.log2(alt)*5);
   if(key === labelKey) return; labelKey = key;
-  const minA = 0.0055*alt*alt;
+  const minA = 0.0022*alt*alt; // country names show from about 300,000 km² at the opening view
   world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA), ...CITY_LABELS]);
   const f = Math.max(0.1, Math.min(1, alt/1.85));
   world.pointRadius(d => (0.2 + 0.09*Math.sqrt(d.items.length))*f);
@@ -242,8 +244,15 @@ function tidyLabels(){
     if(show){
       const {x, y} = world.getScreenCoords(d.lat, d.lng, 0.006);
       if(!d.w){ d.w = s.offsetWidth; d.h = s.offsetHeight; }
-      const box = d.kind === "city" ? [x - 6, y - 10, x + 9 + d.w, y + 8] : [x - d.w/2, y - d.h/2, x + d.w/2, y + d.h/2];
-      if(d.kind !== "city" && overlaps(box, placed)) show = false; else placed.push(box);
+      if(d.kind === "city"){ placed.push([x - 6, y - 10, x + 9 + d.w, y + 8]); }
+      else {
+        /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
+        show = false;
+        for(const o of [0, -1.25, 1.25, -2.5, 2.5]){
+          const dy = o*d.h, b = [x - d.w/2, y - d.h/2 + dy, x + d.w/2, y + d.h/2 + dy];
+          if(!overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }
+        }
+      }
     }
     s.style.visibility = show ? "visible" : "hidden";
   }
@@ -534,7 +543,7 @@ function openProfile(slug){
     <a class="btn back" href="#map">← Back to the globe</a>
     <header class="datapage">
       <div class="dp-top"><span>Rhythm Passport · Selector</span><span>${passNo}</span></div>
-      <div class="dp-photo" aria-hidden="true">${esc(plain(initials).toUpperCase())}</div>
+      <div class="dp-photo${c.photo ? " has-img" : ""}" aria-hidden="true">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : esc(plain(initials).toUpperCase())}</div>
       <div class="dp-fields">
         <div class="dp-name"><small>Selector</small><span>${esc(c.name)}</span></div>
         <div><small>Based in</small><span>${esc(c.base)}</span></div>

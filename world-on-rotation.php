@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       World on Rotation
  * Description:       The content behind the World on Rotation globe: mixes and playlists, selectors, places and countries, with their music guides. Includes the Selector role and a one-click import of the launch content.
- * Version:           1.3.2
+ * Version:           1.3.3
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            Rhythm Passport
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WOR_VERSION', '1.3.2' );
+define( 'WOR_VERSION', '1.3.3' );
 define( 'WOR_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WOR_URL', plugin_dir_url( __FILE__ ) );
 
@@ -27,6 +27,8 @@ require_once WOR_DIR . 'includes/data.php';
 require_once WOR_DIR . 'includes/import.php';
 require_once WOR_DIR . 'includes/pages.php';
 require_once WOR_DIR . 'includes/theme-sync.php';
+require_once WOR_DIR . 'includes/submissions.php';
+require_once WOR_DIR . 'includes/hardening.php';
 
 /**
  * Activation: register types, set up roles, import the launch content once, refresh permalinks.

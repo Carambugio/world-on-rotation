@@ -99,7 +99,7 @@ add_action( 'admin_menu', 'wor_selector_menu', 99 );
 
 /** Tell the site admin when a selector submits something. */
 function wor_notify_pending( $new, $old, $post ) {
-	if ( 'wor_mix' !== $post->post_type || 'pending' !== $new || 'pending' === $old ) {
+	if ( 'wor_mix' !== $post->post_type || 'pending' !== $new || 'pending' === $old || ! empty( $GLOBALS['wor_submitting'] ) ) {
 		return;
 	}
 	$author = get_userdata( $post->post_author );

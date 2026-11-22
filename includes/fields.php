@@ -28,6 +28,9 @@ function wor_fields( $post_type ) {
 		'wor_selector' => array(
 			'role'   => array( 'Role', 'text', 'For example: DJ and record collector' ),
 			'base'   => array( 'Based in', 'text', '' ),
+			'nationality' => array( 'Nationality', 'text', '' ),
+			'fullname'    => array( 'Full name', 'text', 'Optional, if different from the name above.' ),
+			'email'       => array( 'Email', 'text', 'Only for contacting them. Never shown on the site.' ),
 			'links'  => array( 'Links', 'lines', 'One per line: Label | link. For example: Mixcloud | https://www.mixcloud.com/name/' ),
 			'sample' => array( 'Sample profile', 'checkbox', 'Tick for placeholder profiles. Untick once the profile is real.' ),
 		),

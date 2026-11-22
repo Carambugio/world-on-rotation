@@ -55,12 +55,14 @@ function wor_create_pages() {
 		'about'          => 'About',
 		'privacy-policy' => 'Privacy policy',
 		'cookies'        => 'Cookies',
+		'submit'         => 'Submit a mix',
 	);
 	// Fingerprints of earlier bundled versions of each page.
 	$previous = array(
-		'about'          => array( 'cf2577b6d6cb4a4790d38eacf11f775e', 'f4d6d6999692ba725ce8ede38571e614' ),
-		'privacy-policy' => array( '77ccbe770afff0fb97306239826f3a81' ),
+		'about'          => array( 'cf2577b6d6cb4a4790d38eacf11f775e', 'f4d6d6999692ba725ce8ede38571e614', '343e23efd72ad51a3b3613a3ad499768' ),
+		'privacy-policy' => array( '77ccbe770afff0fb97306239826f3a81', '13fabfd85a7d7afcc1014971ad7c19c3' ),
 		'cookies'        => array( 'd97b0c56393eb8f6408d335c50e50f5f' ),
+		'submit'         => array(),
 	);
 	foreach ( $pages as $slug => $title ) {
 		$text = wor_page_text( $slug );
@@ -74,6 +76,10 @@ function wor_create_pages() {
 		} else {
 			$now   = wor_page_fingerprint( $page->post_content );
 			$known = array_merge( $previous[ $slug ], array( get_post_meta( $page->ID, '_wor_page_saved', true ) ) );
+			// The very first About text, as saved by the first import, still unedited.
+			if ( 'about' === $slug && false !== strpos( $page->post_content, 'sample placeholders for now' ) && false !== strpos( $page->post_content, 'Every place you play adds a stamp to your passport. World on Rotation is a Rhythm Passport project, run from London.' ) ) {
+				$known[] = $now;
+			}
 			if ( 'privacy-policy' === $slug && 'publish' !== $page->post_status ) {
 				$id = wp_update_post( array( 'ID' => $page->ID, 'post_title' => $title, 'post_content' => $text, 'post_status' => 'publish' ) );
 			} elseif ( $now !== wor_page_fingerprint( $text ) && in_array( $now, $known, true ) ) {

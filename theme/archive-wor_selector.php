@@ -20,7 +20,7 @@ if ( wort_need_plugin() ) :
 		}
 		$wort_init = function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $wort_init, 0, 2 ) ) : strtoupper( substr( $wort_init, 0, 2 ) );
 		?>
-	<a class="card" href="<?php echo esc_url( $wort_comp['url'] ); ?>"><span class="mini-photo" aria-hidden="true"><?php echo esc_html( $wort_init ); ?></span><span><strong><?php echo esc_html( $wort_comp['name'] ); ?></strong><small><?php echo esc_html( $wort_comp['role'] . ' · ' . $wort_comp['base'] ); ?></small></span><em><?php echo (int) $wort_n; ?></em></a>
+	<a class="card" href="<?php echo esc_url( $wort_comp['url'] ); ?>"><span class="mini-photo" aria-hidden="true"><?php echo ! empty( $wort_comp['photo'] ) ? '<img src="' . esc_url( $wort_comp['photo'] ) . '" alt="">' : esc_html( $wort_init ); ?></span><span><strong><?php echo esc_html( $wort_comp['name'] ); ?></strong><small><?php echo esc_html( $wort_comp['role'] . ' · ' . $wort_comp['base'] ); ?></small></span><em><?php echo (int) $wort_n; ?></em></a>
 	<?php endforeach; ?>
 </div>
 	<?php

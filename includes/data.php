@@ -62,6 +62,8 @@ function wor_data() {
 			'name'   => $s->post_title,
 			'role'   => (string) wor_meta( $s->ID, 'role' ),
 			'base'   => (string) wor_meta( $s->ID, 'base' ),
+			'nationality' => (string) wor_meta( $s->ID, 'nationality' ),
+			'photo'  => (string) get_the_post_thumbnail_url( $s, 'medium' ),
 			'sample' => '1' === wor_meta( $s->ID, 'sample' ),
 			'bio'    => wp_strip_all_tags( implode( ' ', wor_content_paras( $s ) ) ),
 			'links'  => array_map( function ( $r ) { return array( $r['name'], $r['url'] ? $r['url'] : $r['note'] ); }, $links_rows ),
@@ -184,7 +186,7 @@ function wor_globe_data() {
 	}
 	$comp = array();
 	foreach ( $d['C'] as $slug => $c ) {
-		$comp[ $slug ] = array_intersect_key( $c, array_flip( array( 'name', 'role', 'base', 'sample', 'bio', 'links' ) ) );
+		$comp[ $slug ] = array_intersect_key( $c, array_flip( array( 'name', 'role', 'base', 'nationality', 'photo', 'sample', 'bio', 'links' ) ) );
 	}
 	$cg = array();
 	foreach ( $d['CGUIDE'] as $n => $g ) {

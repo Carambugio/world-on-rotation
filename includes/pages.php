@@ -46,8 +46,9 @@ function wor_page_fingerprint( $html ) {
 }
 
 /**
- * Create the About, Privacy policy and Cookies pages if they are missing.
- * Replaces only pages nobody has edited: the first About text, or WordPress's own draft privacy page.
+ * Create the About, Privacy policy and Cookies pages if they are missing, and bring them up to date
+ * after a plugin update. A page is only replaced while it is still exactly the text the plugin put
+ * there (or WordPress's own unpublished sample privacy page); pages edited in the dashboard are left alone.
  */
 function wor_create_pages() {
 	$pages = array(
@@ -55,30 +56,41 @@ function wor_create_pages() {
 		'privacy-policy' => 'Privacy policy',
 		'cookies'        => 'Cookies',
 	);
-	$done  = (array) get_option( 'wor_pages_made', array() );
+	// Fingerprints of earlier bundled versions of each page.
+	$previous = array(
+		'about'          => array( 'cf2577b6d6cb4a4790d38eacf11f775e', 'f4d6d6999692ba725ce8ede38571e614' ),
+		'privacy-policy' => array( '77ccbe770afff0fb97306239826f3a81' ),
+		'cookies'        => array( 'd97b0c56393eb8f6408d335c50e50f5f' ),
+	);
 	foreach ( $pages as $slug => $title ) {
 		$text = wor_page_text( $slug );
 		if ( ! $text ) {
 			continue;
 		}
 		$page = get_page_by_path( $slug, OBJECT, 'page' );
-		$args = array( 'post_type' => 'page', 'post_title' => $title, 'post_name' => $slug, 'post_content' => $text, 'post_status' => 'publish' );
+		$id   = 0;
 		if ( ! $page ) {
-			$id = wp_insert_post( $args );
-		} elseif ( 'about' === $slug && empty( $done['about'] ) && 'cf2577b6d6cb4a4790d38eacf11f775e' === wor_page_fingerprint( $page->post_content ) ) {
-			// The original About text from the first import, still unedited.
-			$id = wp_update_post( array( 'ID' => $page->ID, 'post_content' => $text ) );
-		} elseif ( 'privacy-policy' === $slug && 'publish' !== $page->post_status ) {
-			// WordPress's own unpublished sample privacy page.
-			$args['ID'] = $page->ID;
-			$id         = wp_update_post( $args );
+			$id = wp_insert_post( array( 'post_type' => 'page', 'post_title' => $title, 'post_name' => $slug, 'post_content' => $text, 'post_status' => 'publish' ) );
 		} else {
-			$id = $page->ID;
+			$now   = wor_page_fingerprint( $page->post_content );
+			$known = array_merge( $previous[ $slug ], array( get_post_meta( $page->ID, '_wor_page_saved', true ) ) );
+			if ( 'privacy-policy' === $slug && 'publish' !== $page->post_status ) {
+				$id = wp_update_post( array( 'ID' => $page->ID, 'post_title' => $title, 'post_content' => $text, 'post_status' => 'publish' ) );
+			} elseif ( $now !== wor_page_fingerprint( $text ) && in_array( $now, $known, true ) ) {
+				$id = wp_update_post( array( 'ID' => $page->ID, 'post_content' => $text ) );
+			} else {
+				$id = $page->ID;
+			}
 		}
-		if ( 'privacy-policy' === $slug && $id && ! is_wp_error( $id ) ) {
-			update_option( 'wp_page_for_privacy_policy', (int) $id );
+		if ( $id && ! is_wp_error( $id ) ) {
+			clean_post_cache( $id );
+			$saved = get_post( $id );
+			if ( $saved && wor_page_fingerprint( $saved->post_content ) === wor_page_fingerprint( $text ) ) {
+				update_post_meta( $id, '_wor_page_saved', wor_page_fingerprint( $saved->post_content ) );
+			}
+			if ( 'privacy-policy' === $slug ) {
+				update_option( 'wp_page_for_privacy_policy', (int) $id );
+			}
 		}
-		$done[ $slug ] = 1;
 	}
-	update_option( 'wor_pages_made', $done );
 }

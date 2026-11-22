@@ -55,9 +55,11 @@ function wor_parse_paras( $text ) {
 	return $out;
 }
 
-/** Plain text of post content, split into paragraphs. */
+/** Text of post content, split into paragraphs. Bold and italics are kept; other markup is dropped. */
 function wor_content_paras( $post ) {
-	$text = wp_strip_all_tags( str_replace( array( '</p>', '<br>', '<br />' ), "\n\n", (string) $post->post_content ) );
+	$text = preg_replace( '/<!--.*?-->/s', '', (string) $post->post_content );
+	$text = preg_replace( array( '#<b(\s[^>]*)?>#i', '#</b>#i', '#<i(\s[^>]*)?>#i', '#</i>#i' ), array( '<strong>', '</strong>', '<em>', '</em>' ), $text );
+	$text = wp_kses( str_replace( array( '</p>', '<br>', '<br />' ), "\n\n", $text ), array( 'strong' => array(), 'em' => array() ) );
 	return wor_parse_paras( html_entity_decode( $text, ENT_QUOTES, 'UTF-8' ) );
 }
 

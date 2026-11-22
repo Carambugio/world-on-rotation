@@ -63,7 +63,7 @@ function wor_data() {
 			'role'   => (string) wor_meta( $s->ID, 'role' ),
 			'base'   => (string) wor_meta( $s->ID, 'base' ),
 			'sample' => '1' === wor_meta( $s->ID, 'sample' ),
-			'bio'    => implode( ' ', wor_content_paras( $s ) ),
+			'bio'    => wp_strip_all_tags( implode( ' ', wor_content_paras( $s ) ) ),
 			'links'  => array_map( function ( $r ) { return array( $r['name'], $r['url'] ? $r['url'] : $r['note'] ); }, $links_rows ),
 			'url'    => get_permalink( $s ),
 		);
@@ -149,7 +149,7 @@ function wor_data() {
 			'tracks'   => (int) wor_meta( $m->ID, 'tracks' ),
 			'genres'   => $genres,
 			'added'    => $added ? $added : get_the_date( 'Y-m-d', $m ),
-			'desc'     => implode( ' ', wor_content_paras( $m ) ),
+			'desc'     => wp_strip_all_tags( implode( ' ', wor_content_paras( $m ) ) ),
 			'mixcloud' => wor_mixcloud_feed( wor_meta( $m->ID, 'mixcloud' ) ),
 			'spotify'  => wor_spotify_embed( wor_meta( $m->ID, 'spotify' ) ),
 			'url'      => get_permalink( $m ),

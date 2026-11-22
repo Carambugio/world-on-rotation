@@ -1,0 +1,67 @@
+<div id="app">
+  <div id="globeViz" aria-label="Satellite globe with pins for mixes and playlists"></div>
+
+  <section class="brand" aria-label="World on Rotation: search">
+    <h1>World on Rotation</h1>
+    <div class="brand-eyebrow">Your Rhythm Passport to everywhere</div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search a place, country, mix, playlist or selector" autocomplete="off" aria-label="Search">
+      <div id="results" class="results" hidden></div>
+    </div>
+    <div class="brand-row">
+      <span class="stats" id="stats"></span>
+      <span class="brand-tools"><button class="btn small" id="my-pass" type="button">Your passport · <b id="my-pass-n">0</b></button><a class="btn primary small" id="to-record" href="#random">◉ Play something random</a></span>
+    </div>
+    <nav class="brand-nav" aria-label="Pages"><a href="places/">Places</a><a href="countries/">Countries</a><a href="selectors/">Selectors</a><a href="about/">About</a></nav>
+    <p class="motto">Music... It Means the World To Us!</p>
+  </section>
+
+  <div class="proto">Drag to spin · scroll to zoom · tap a country</div>
+  <div class="hint" id="hint">Tap a pin or a country</div>
+
+  <div class="zoom">
+    <button id="zin" type="button" aria-label="Zoom in">+</button>
+    <button id="zout" type="button" aria-label="Zoom out">−</button>
+    <button id="zreset" type="button" aria-label="Show the whole globe" style="font-size:12.5px">⌂</button>
+  </div>
+
+  <aside id="panel" class="panel" hidden aria-live="polite"></aside>
+  <div id="now" class="now" hidden></div>
+  <section id="profile" class="profile" hidden></section>
+
+  <div id="bar" class="bar" hidden>
+    <div class="pass">
+      <div class="pass-main">
+        <div class="pass-head"><span>Boarding pass</span><span id="bp-flight"></span></div>
+        <div class="pass-route">
+          <div class="pr"><b id="bp-from"></b><span id="bp-fromc"></span></div>
+          <svg class="pr-line" viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden="true"><circle cx="4" cy="6" r="3"/><path d="M10 6H108" stroke-dasharray="4 4"/><path d="M106 1l8 5-8 5"/></svg>
+          <div class="pr pr-to"><b id="bp-to"></b><span id="bp-toc"></span></div>
+        </div>
+        <div class="pass-fields">
+          <div class="pf-mix"><small>Mix</small><strong id="bar-title"></strong></div>
+          <div><small>Captain</small><span id="bp-captain"></span></div>
+          <div><small>Flight time</small><span id="bp-time"></span></div>
+        </div>
+      </div>
+      <div class="pass-stub"><div id="bar-art" class="bar-art"></div><button class="btn small" id="bar-show" type="button">Show on globe</button></div>
+    </div>
+    <iframe id="bar-frame" title="Mixcloud player" frameborder="0" allow="encrypted-media; fullscreen; autoplay; idle-detection; speaker-selection; web-share"></iframe>
+    <small class="bar-note">If it doesn't start by itself, press play.</small>
+  </div>
+  <div id="grain" aria-hidden="true"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <filter id="rp-ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.9 1.65" result="m"/>
+      <feComposite in="d" in2="m" operator="in"/>
+    </filter></defs></svg>
+  <div id="intro" class="intro" aria-label="Random selection: a mix from your side of the world" hidden>
+    <canvas id="rec" aria-hidden="true"></canvas>
+    <svg id="recarm" aria-hidden="true"><defs><filter id="rblur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3"/></filter></defs></svg>
+    <div class="intro-head"><h1>World on Rotation</h1><p class="intro-sub">Your Rhythm Passport to everywhere</p><p>A random mix from your side of the world, playing now</p><p class="motto intro-motto">Music... It Means the World To Us!</p></div>
+    <p class="turn" id="turn">Turn your phone sideways for bigger decks</p><button class="btn primary deck-btn" type="button">Open the globe</button><button class="btn primary deck-btn" type="button">Open the globe</button>
+  </div>
+</div>

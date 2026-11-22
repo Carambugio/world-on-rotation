@@ -54,7 +54,8 @@ function wor_lines_from( $pairs, $links ) {
 	foreach ( (array) $pairs as $pair ) {
 		$name = is_array( $pair ) ? $pair[0] : $pair;
 		$note = is_array( $pair ) && isset( $pair[1] ) ? $pair[1] : '';
-		$url  = isset( $links[ $name ] ) ? $links[ $name ] : '';
+		$key  = wp_strip_all_tags( $name );
+		$url  = isset( $links[ $key ] ) ? $links[ $key ] : '';
 		$line = $name;
 		if ( '' !== $note || '' !== $url ) {
 			$line .= ' | ' . $note;

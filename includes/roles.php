@@ -54,10 +54,14 @@ function wor_maybe_upgrade() {
 			update_option( 'wor_guides_130', 1 );
 		}
 		if ( get_option( 'wor_imported' ) && function_exists( 'wor_sync_bundled_countries' ) ) {
-			// 1.3.1 added Yunnan to the China guide.
+			// 1.3.1 added Yunnan to the China guide; 1.3.2 put every guide in house style.
 			$force = get_option( 'wor_guides_131' ) ? array() : array( 'China' );
+			if ( ! get_option( 'wor_guides_132' ) ) {
+				$force = array_keys( (array) wor_json( 'country_info.json' ) );
+			}
 			wor_sync_bundled_countries( $force );
 			update_option( 'wor_guides_131', 1 );
+			update_option( 'wor_guides_132', 1 );
 		}
 		if ( get_option( 'wor_imported' ) && function_exists( 'wor_create_pages' ) ) {
 			wor_create_pages();

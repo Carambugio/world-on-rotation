@@ -137,23 +137,29 @@ function wort_place_card( $c ) {
 }
 
 /** A name, linked if its list line had a link. */
-function wort_nm( $n ) {
-	$d = wor_data();
-	if ( ! empty( $d['LINKS'][ $n ] ) ) {
-		return '<a class="g-link" href="' . esc_url( $d['LINKS'][ $n ] ) . '">' . esc_html( $n ) . ' ↗</a>';
-	}
-	return esc_html( $n );
+/** Guide text: everything escaped except <strong> and <em> (artist names, titles, foreign terms). */
+function wort_rich( $t ) {
+	return wp_kses( (string) $t, array( 'strong' => array(), 'em' => array() ) );
 }
 
-function wort_glist( $title, $rows ) {
+function wort_nm( $n ) {
+	$d     = wor_data();
+	$plain = wp_strip_all_tags( $n );
+	if ( ! empty( $d['LINKS'][ $plain ] ) ) {
+		return '<a class="g-link" href="' . esc_url( $d['LINKS'][ $plain ] ) . '">' . wort_rich( $n ) . ' ↗</a>';
+	}
+	return wort_rich( $n );
+}
+
+function wort_glist( $title, $rows, $cls = '' ) {
 	if ( ! $rows ) {
 		return '';
 	}
 	$out = '';
 	foreach ( $rows as $row ) {
-		$out .= '<li><strong>' . wort_nm( $row[0] ) . '</strong>' . ( $row[1] ? '<span> · ' . esc_html( $row[1] ) . '</span>' : '' ) . '</li>';
+		$out .= '<li><strong>' . wort_nm( $row[0] ) . '</strong>' . ( $row[1] ? '<span> · ' . wort_rich( $row[1] ) . '</span>' : '' ) . '</li>';
 	}
-	return '<div class="g-block"><h3>' . esc_html( $title ) . '</h3><ul class="g-list">' . $out . '</ul></div>';
+	return '<div class="g-block' . ( $cls ? ' ' . esc_attr( $cls ) : '' ) . '"><h3>' . esc_html( $title ) . '</h3><ul class="g-list">' . $out . '</ul></div>';
 }
 
 function wort_gparas( $title, $ps ) {
@@ -162,7 +168,7 @@ function wort_gparas( $title, $ps ) {
 	}
 	$out = '';
 	foreach ( $ps as $t ) {
-		$out .= '<p>' . esc_html( $t ) . '</p>';
+		$out .= '<p>' . wort_rich( $t ) . '</p>';
 	}
 	return '<div class="g-block"><h3>' . esc_html( $title ) . '</h3>' . $out . '</div>';
 }
@@ -170,7 +176,7 @@ function wort_gparas( $title, $ps ) {
 function wort_paras( $ps ) {
 	$out = '';
 	foreach ( $ps as $t ) {
-		$out .= '<p>' . esc_html( $t ) . '</p>';
+		$out .= '<p>' . wort_rich( $t ) . '</p>';
 	}
 	return $out;
 }

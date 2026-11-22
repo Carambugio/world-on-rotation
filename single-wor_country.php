@@ -36,7 +36,7 @@ if ( wort_need_plugin() ) :
 	<div class="g-grid"><?php echo wort_glist( wort_t( 'traditions' ), $wort_g['traditions'] ); // phpcs:ignore ?></div>
 	<?php echo wort_gparas( wort_t( 'eras' ), $wort_g['eras'] ) . wort_gparas( wort_t( 'diaspora' ), $wort_g['diaspora'] ) . wort_gparas( wort_t( 'now' ), $wort_g['now'] ); // phpcs:ignore ?>
 	<div class="g-grid"><?php echo wort_glist( wort_t( 'dig' ), $wort_g['dig'] ) . wort_glist( wort_t( 'festivals' ), $wort_g['festivals'] ); // phpcs:ignore ?></div>
-	<div class="g-grid"><?php echo wort_glist( wort_t( 'records' ), $wort_g['records'] ); // phpcs:ignore ?></div>
+	<div class="g-grid"><?php echo wort_glist( wort_t( 'records' ), $wort_g['records'], 'g-records' ); // phpcs:ignore ?></div>
 </section>
 	<?php endif; ?>
 	<?php

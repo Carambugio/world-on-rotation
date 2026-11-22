@@ -406,3 +406,6 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
   .brand-tools{flex-wrap:nowrap;justify-content:stretch}
   .brand-tools .btn{flex:1 1 0;min-width:0;justify-content:center;text-align:center;white-space:normal;line-height:1.25}
 }
+
+/* Album titles: italic, regular weight */
+.g-records .g-list strong,.g-records .g-list li strong{font-weight:400;font-style:italic}

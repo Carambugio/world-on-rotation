@@ -5,6 +5,8 @@ const COUNTRY_INFO = WOR.countries;
 /* ---------- Helpers ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* Guide text may carry <strong> and <em> (artist names, titles, foreign terms); everything else stays escaped. */
+const rich = s => esc(s).replace(/&lt;(\/?)(strong|em)&gt;/g, "<$1$2>");
 const fmt = s => { s=Math.max(0,Math.floor(s)); const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60; return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0"); };
 const durLabel = s => { const h=Math.floor(s/3600),m=Math.round(s%3600/60); return (h?h+"h ":"")+String(m).padStart(2,"0")+"m"; };
 const coord = (lat,lon) => `${Math.abs(lat).toFixed(2)}°${lat>=0?"N":"S"} ${Math.abs(lon).toFixed(2)}°${lon>=0?"E":"W"}`;
@@ -305,23 +307,23 @@ function openPanel(html){
   panel.querySelectorAll("[data-country]").forEach(b => b.onclick = () => { const k = COUNTRY.find(c=>c.name===b.dataset.country); if(k) openCountry(k); });
   hideHint();
 }
-function nm(n){ const u = LINKS[n]; return u ? `<a class="g-link" href="${esc(u)}" target="_blank" rel="noopener">${esc(n)} ↗</a>` : esc(n); }
+function nm(n){ const u = LINKS[String(n).replace(/<\/?(strong|em)>/g, "")]; return u ? `<a class="g-link" href="${esc(u)}" target="_blank" rel="noopener">${rich(n)} ↗</a>` : rich(n); }
 function theName(n){ return ["United Kingdom","United States"].includes(n) ? "the " + n : n; }
 function countryGuide(name){
   const g = COUNTRY_INFO[name]; if(!g) return "";
-  const list = (title, rows) => rows && rows.length ? `<div class="g-block"><div class="label">${title}</div><ul class="g-list">${rows.map(([n, d]) => `<li><strong>${nm(n)}</strong>${d ? `<span> · ${esc(d)}</span>` : ""}</li>`).join("")}</ul></div>` : "";
-  const paras = (title, ps) => ps && ps.length ? `<div class="g-block"><div class="label">${title}</div>${ps.map(t => `<p>${esc(t)}</p>`).join("")}</div>` : "";
+  const list = (title, rows, cls) => rows && rows.length ? `<div class="g-block${cls ? " " + cls : ""}"><div class="label">${title}</div><ul class="g-list">${rows.map(([n, d]) => `<li><strong>${nm(n)}</strong>${d ? `<span> · ${rich(d)}</span>` : ""}</li>`).join("")}</ul></div>` : "";
+  const paras = (title, ps) => ps && ps.length ? `<div class="g-block"><div class="label">${title}</div>${ps.map(t => `<p>${rich(t)}</p>`).join("")}</div>` : "";
   return `<section class="guide" aria-label="${esc(TX.sound_of)} ${esc(theName(name))}">
     <h3>${esc(TX.sound_of)} ${esc(theName(name))}</h3>
     <a class="page-link" href="countries/${(WOR.slugs.countries || {})[name] || slugOf(name)}/">Open the ${esc(name)} page →</a>
-    ${g.map.map(t => `<p>${esc(t)}</p>`).join("")}
+    ${g.map.map(t => `<p>${rich(t)}</p>`).join("")}
     ${list(TX.traditions, g.traditions)}
     ${paras(TX.eras, g.eras)}
     ${paras(TX.diaspora, g.diaspora)}
     ${paras(TX.now, g.now)}
     ${list(TX.dig, g.dig)}
     ${list(TX.festivals, g.festivals)}
-    ${list(TX.records, g.records)}
+    ${list(TX.records, g.records, "g-records")}
   </section>`;
 }
 function openCountry(k){
@@ -352,11 +354,11 @@ function openCountry(k){
 const slugOf = s => plain(String(s)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 function cityGuide(name){
   const g = CITY_INFO[name]; if(!g) return "";
-  const list = (title, rows) => rows && rows.length ? `<div class="g-block"><div class="label">${title}</div><ul class="g-list">${rows.map(([n, d]) => `<li><strong>${nm(n)}</strong>${d ? `<span> · ${esc(d)}</span>` : ""}</li>`).join("")}</ul></div>` : "";
+  const list = (title, rows) => rows && rows.length ? `<div class="g-block"><div class="label">${title}</div><ul class="g-list">${rows.map(([n, d]) => `<li><strong>${nm(n)}</strong>${d ? `<span> · ${rich(d)}</span>` : ""}</li>`).join("")}</ul></div>` : "";
   return `<section class="guide" aria-label="${esc(TX.sound_of)} ${esc(name)}">
     <h3>${esc(TX.sound_of)} ${esc(name)}</h3>
     <a class="page-link" href="places/${(WOR.slugs.places || {})[name] || slugOf(name)}/">Open the ${esc(name)} page →</a>
-    ${g.intro.map(t => `<p>${esc(t)}</p>`).join("")}
+    ${g.intro.map(t => `<p>${rich(t)}</p>`).join("")}
     ${g.born.length ? `<div class="g-block"><div class="label">${esc(TX.born)}</div><p class="g-names">${g.born.map(nm).join(" · ")}</p></div>` : ""}
     ${list(TX.adopted, g.adopted)}
     ${list(TX.listen, g.listen)}

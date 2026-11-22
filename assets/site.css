@@ -100,3 +100,6 @@ dd a{text-decoration-color:var(--accent);text-underline-offset:3px}
 }
 /* A head with no stamp (country pages) uses the full width */
 .pass-head>div:only-child,.visa-head>div:only-child{grid-column:1/-1}
+
+/* Album titles: italic, regular weight */
+.g-records .g-list strong,.g-records .g-list li strong{font-weight:400;font-style:italic}

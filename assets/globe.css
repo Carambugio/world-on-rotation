@@ -409,3 +409,6 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 
 /* Album titles: italic, regular weight */
 .g-records .g-list strong,.g-records .g-list li strong{font-weight:400;font-style:italic}
+
+/* Country names: quieter than the place names, so the map reads first */
+.glabel.country span{font-weight:400;letter-spacing:.22em;color:rgba(255,255,255,.62);text-shadow:0 1px 2px rgba(0,0,0,.85)}

@@ -81,7 +81,7 @@ function labelEl(d){
   if(d.el) return d.el;
   const el = document.createElement("div"), s = document.createElement("span");
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
-  if(d.kind === "country") s.style.fontSize = Math.round(Math.max(10.5, Math.min(16, 10 + Math.sqrt(d.a)*28))) + "px";
+  if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
   let down = null;
   s.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
   s.addEventListener("click", e => { e.stopPropagation(); labelClickAt = performance.now();

@@ -143,6 +143,25 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     } catch(e){}
     if(!globe || !mat.map) return;
     const Tex = mat.map.constructor;
+    /* Sharper picture once you zoom in: an 8K Earth on screens that can hold it, and finer borders */
+    const caps = world.renderer().capabilities, aniso = caps.getMaxAnisotropy ? caps.getMaxAnisotropy() : 1;
+    mat.map.anisotropy = aniso; mat.map.needsUpdate = true;
+    const roomy = Math.min(screen.width, screen.height) >= 600 && caps.maxTextureSize >= 8192 && !(navigator.connection && navigator.connection.saveData);
+    let hd = false, fine = null, fineOn = false;
+    window.wantDetail = alt => {
+      if(alt < 1.1 && !hd){
+        hd = true;
+        if(roomy) img(WOR.img + "earth-hd.jpg").then(i => {
+          const t = new Tex(i), old = mat.map; if(old.colorSpace) t.colorSpace = old.colorSpace;
+          t.anisotropy = aniso; t.needsUpdate = true; mat.map = t; mat.needsUpdate = true; old.dispose();
+        }).catch(() => {});
+        fetch(WOR.img + "borders-50m.json").then(r => r.json()).then(l => { fine = l; wantDetail(world.pointOfView().altitude); }).catch(() => {});
+      }
+      if(!fine) return;
+      if(alt < 1.1 && !fineOn){ fineOn = true; world.pathsData(fine); }
+      else if(alt > 1.5 && fineOn){ fineOn = false; world.pathsData(BORDERS); }
+    };
+    wantDetail(world.pointOfView().altitude);
     try {
       const w = await img(WOR.img + "earth-water.jpg"), wt = new Tex(w); wt.needsUpdate = true;
       mat.specularMap = wt; mat.specular.set("#5b6b7a"); mat.shininess = 16; mat.needsUpdate = true;
@@ -209,6 +228,7 @@ function refreshLabels(){
   world.pointRadius(d => (0.2 + 0.09*Math.sqrt(d.items.length))*f);
   world.ringMaxRadius(d => (1.1 + 0.35*Math.sqrt(d.items.length))*f);
   if(window.setCloudsFor) setCloudsFor(alt);
+  if(window.wantDetail) wantDetail(alt);
 }
 ctl.addEventListener("change", refreshLabels);
 refreshLabels();

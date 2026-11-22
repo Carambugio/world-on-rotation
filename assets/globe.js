@@ -95,7 +95,7 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .pathsData(BORDERS).pathPoints(d => d).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(0.002)
   .pathColor(() => "rgba(255,255,255,0.2)").pathStroke(null).pathTransitionDuration(0)
   .polygonsData([]).polygonCapColor(() => "rgba(255,214,150,0.13)").polygonSideColor(() => "rgba(0,0,0,0)")
-  .polygonStrokeColor(() => "rgba(255,226,170,0.85)").polygonAltitude(0.004).polygonsTransitionDuration(0)
+  .polygonStrokeColor(() => "rgba(255,226,170,0.85)").polygonAltitude(0.005).polygonCapCurvatureResolution(1.5).polygonsTransitionDuration(0)
   .pointsData(CITIES).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
@@ -146,7 +146,7 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     try {
       const c = await img(WOR.img + "clouds.jpg"), ct = new Tex(c); ct.needsUpdate = true;
       const R = world.getGlobeRadius(), seg = globe.geometry.parameters || {};
-      const geo = new globe.geometry.constructor(R * 1.0045, seg.widthSegments || 75, seg.heightSegments || 75);
+      const geo = new globe.geometry.constructor(R * 1.011, seg.widthSegments || 75, seg.heightSegments || 75);
       const cm = new mat.constructor({ color: 0xffffff, alphaMap: ct, transparent: true, opacity: cloudOp, depthWrite: false, shininess: 0 });
       clouds = new globe.constructor(geo, cm); clouds.renderOrder = 1; clouds.raycast = () => {};
       world.scene().add(clouds); setCloudsFor(world.pointOfView().altitude);

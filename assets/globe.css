@@ -397,3 +397,12 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .brand,.panel,.profile .datapage,.pass{background-image:none!important}
 .panel-head{background:none!important}
 .dp-photo,.mini-photo{background:rgba(255,255,255,.04)!important}
+
+/* Phones: a smaller search panel, so the globe gets most of the screen */
+@media (max-width:720px){
+  .brand .motto{display:none}
+  .brand-eyebrow{font-size:9px}
+  .brand-row{flex-direction:column;align-items:stretch;gap:8px}
+  .brand-tools{flex-wrap:nowrap;justify-content:stretch}
+  .brand-tools .btn{flex:1 1 0;min-width:0;justify-content:center;text-align:center;white-space:normal;line-height:1.25}
+}

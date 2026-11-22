@@ -80,6 +80,7 @@ dd a{text-decoration-color:var(--accent);text-underline-offset:3px}
 .motto.big{font-size:21px}
 .foot{border-top:1px solid var(--line);margin-top:20px}
 .foot-in{padding-block:22px 36px;display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--muted)}
+.foot-links{display:flex;flex-wrap:wrap;gap:6px 18px}.foot-links a{color:var(--muted)}.foot-links a:hover{color:var(--ink,inherit)}
 @media (max-width:640px){.pass-head,.visa-head,.datapage .dp{grid-template-columns:96px 1fr;gap:16px}.dp-photo{width:96px;height:124px;font-size:31.5px}.dp-fields{grid-template-columns:1fr}.lede{font-size:15px}.sheet{padding:18px 16px 22px}h2{font-size:21px}}
 
 .page-body p{max-width:68ch}.page-body .credits{color:var(--muted);font-size:13px;margin-top:1.4em}
@@ -88,3 +89,14 @@ dd a{text-decoration-color:var(--accent);text-underline-offset:3px}
 .sheet{background-image:none!important}
 .sheet::before{display:none!important}
 .mini-photo,.dp-photo{background:rgba(255,255,255,.04)!important}
+
+/* Section headings sit with the text they introduce */
+.guide h2,.intro-block h2{margin:12px 0 -4px}
+/* Phones: stamps and photos stay at the top of their column, and the text gets the width */
+@media (max-width:640px){
+  .pass-head,.visa-head{grid-template-columns:76px 1fr;gap:14px;align-items:start}
+  .datapage .dp{align-items:start}
+  .sheet-top{font-size:10.5px}
+}
+/* A head with no stamp (country pages) uses the full width */
+.pass-head>div:only-child,.visa-head>div:only-child{grid-column:1/-1}

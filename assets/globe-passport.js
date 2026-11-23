@@ -98,15 +98,16 @@ function labelEl(d){
   el.appendChild(s); d.el = el; return el;
 }
 const PIN = "#ffc76e", PIN_ON = "#fff4dc";
-let HLFEAT = null;
-const MIXFEATS = [...new Set(CITIES.map(c => c.ci && c.ci.feat).filter(Boolean))];
+/* Land is drawn as shapes, so coasts and borders stay sharp at any zoom; the paper and relief come from a texture looked up by position. */
+let HLRAW = null, LAND50 = null;
+const MIXRAW = new Set(CITIES.map(c => c.ci && c.ci.raw).filter(Boolean));
 const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .globeImageUrl(WOR.img + "earth-passport.jpg" + IMGV).backgroundColor("rgba(0,0,0,0)")
   .showAtmosphere(true).atmosphereColor("#e8d6ad").atmosphereAltitude(0.11)
   .pathsData([]).pathPoints(d => d).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(0.002)
   .pathColor(() => "rgba(40,46,62,0.85)").pathStroke(null).pathTransitionDuration(0)
-  .polygonsData(MIXFEATS).polygonCapColor(f => f === HLFEAT ? "rgba(240,160,60,0.34)" : "rgba(240,170,80,0.2)").polygonSideColor(() => "rgba(0,0,0,0)")
-  .polygonStrokeColor(f => f === HLFEAT ? "rgba(163,48,43,0.9)" : "rgba(0,0,0,0)").polygonAltitude(0.005).polygonCapCurvatureResolution(1.5).polygonsTransitionDuration(0)
+  .polygonsData([]).polygonCapColor(d => d.n === HLRAW ? "rgba(235,140,40,0.36)" : "rgba(240,170,80,0.24)").polygonSideColor(() => null)
+  .polygonStrokeColor(d => d.n === HLRAW ? "rgba(163,48,43,0.95)" : null).polygonAltitude(0.006).polygonCapCurvatureResolution(4).polygonsTransitionDuration(0)
   .pointsData([]).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
@@ -166,13 +167,77 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           const t = new Tex(i), old = mat.map; if(old.colorSpace) t.colorSpace = old.colorSpace;
           t.anisotropy = aniso; t.needsUpdate = true; mat.map = t; mat.needsUpdate = true; old.dispose();
         }).catch(() => {});
-        fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json()).then(l => { fine = l; wantDetail(world.pointOfView().altitude); }).catch(() => {});
       }
       if(!fine) return;
-      if(alt < 1.1 && !fineOn){ fineOn = true; world.pathsData(fine); }
-      else if(alt > 1.5 && fineOn){ fineOn = false; world.pathsData([]); }
     };
     wantDetail(world.pointOfView().altitude);
+    Promise.all([img(WOR.img + "land-paper.jpg" + IMGV), fetch(WOR.img + "land-50m.json" + IMGV).then(r => r.json()), fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json())]).then(([pi, shapes, lines]) => {
+      const lt = new Tex(pi); if(mat.map.colorSpace) lt.colorSpace = mat.map.colorSpace; lt.anisotropy = aniso; lt.needsUpdate = true;
+      const landMat = new mat.constructor({ color: 0xffffff, shininess: 0 }); if(landMat.specular) landMat.specular.set("#000000");
+      landMat.onBeforeCompile = sh => {
+        sh.uniforms.landTex = { value: lt };
+        sh.vertexShader = "varying vec3 vGeo;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vGeo = position;");
+        sh.fragmentShader = "uniform sampler2D landTex;\nvarying vec3 vGeo;\n" + sh.fragmentShader.replace("#include <map_fragment>", `
+  vec3 pn = normalize(vGeo);
+  vec2 luv = vec2(atan(pn.x, pn.z) / 6.2831853 + 0.5, asin(clamp(pn.y, -1.0, 1.0)) / 3.1415927 + 0.5);
+  vec2 luvB = vec2(fract(luv.x + 0.5), luv.y);
+  vec2 dx = dFdx(luv), dy = dFdy(luv), dxB = dFdx(luvB), dyB = dFdy(luvB);
+  if(abs(dx.x) + abs(dy.x) > abs(dxB.x) + abs(dyB.x)){ dx.x = dxB.x; dy.x = dyB.x; }
+  diffuseColor.rgb *= textureGrad(landTex, luv, dx, dy).rgb;`);
+      };
+      landMat.customProgramCacheKey = () => "wor-land";
+      LAND50 = shapes.map(f => ({ type: "Feature", n: f.n, geometry: f.g }));
+      // Borrow three.js classes from globe.gl through a throwaway shape, then build all land as one mesh and all lines as one object.
+      world.polygonStrokeColor(() => "#000").polygonsData([{ type: "Feature", n: "", geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } }]);
+      const probe = () => {
+        let cone = null, seg = null;
+        world.scene().traverse(o => { if(o.geometry && o.geometry.type === "ConicPolygonGeometry") cone = o; if(o.isLineSegments) seg = o; });
+        if(!cone || !seg) return setTimeout(probe, 40);
+        const Conic = cone.geometry.constructor, BG = Object.getPrototypeOf(Conic.prototype).constructor;
+        const Attr = Object.getPrototypeOf(cone.geometry.getAttribute("position").constructor.prototype).constructor, Mesh = cone.constructor, Seg = seg.constructor, LineMat = seg.material.constructor;
+        world.polygonStrokeColor(d => d.n === HLRAW ? "rgba(163,48,43,0.95)" : null).polygonsData([]);
+        const cat = (arrs, T) => { const out = new T(arrs.reduce((a, b) => a + b.length, 0)); let o = 0; arrs.forEach(a => { out.set(a, o); o += a.length; }); return out; };
+        const merged = (feats, done) => {
+        const polys = []; feats.forEach(f => f.geometry.coordinates.forEach(pc => polys.push(pc)));
+        const pos = [], nor = [], idx = []; let off = 0, i = 0;
+        const step = () => {
+          const end = Math.min(polys.length, i + 80);
+          for(; i < end; i++){
+            let g; try { g = new Conic(polys[i], 0, 100, false, true, false, 4); } catch(e){ continue; }
+            const p = g.getAttribute("position").array, n = g.getAttribute("normal").array, ix = g.getIndex(), cnt = p.length / 3;
+            const sh = new Uint32Array(ix ? ix.count : cnt);
+            for(let k = 0; k < sh.length; k++) sh[k] = (ix ? ix.array[k] : k) + off;
+            pos.push(p); nor.push(n); idx.push(sh); off += cnt; g.dispose();
+          }
+          if(i < polys.length) return setTimeout(step, 0);
+          const geo = new BG();
+          geo.setAttribute("position", new Attr(cat(pos, Float32Array), 3)); geo.setAttribute("normal", new Attr(cat(nor, Float32Array), 3)); geo.setIndex(new Attr(cat(idx, Uint32Array), 1));
+          done(geo);
+        };
+        step();
+        };
+        merged(LAND50, geo => {
+          const land = new Mesh(geo, landMat); land.scale.setScalar(1.003); world.scene().add(land);
+          const lp = [], toXYZ = (lng, lat, r) => { const ph = (90 - lat) * Math.PI / 180, th = (90 - lng) * Math.PI / 180; return [r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)]; };
+          const segs = (ls, r) => { const a = []; ls.forEach(l => { for(let k = 0; k < l.length - 1; k++){ if(Math.abs(l[k + 1][0] - l[k][0]) > 180) continue; a.push(...toXYZ(l[k][0], l[k][1], r), ...toXYZ(l[k + 1][0], l[k + 1][1], r)); } }); const g = new BG(); g.setAttribute("position", new Attr(new Float32Array(a), 3)); return g; };
+          world.scene().add(new Seg(segs(lines, 100.34), new LineMat({ color: 0x28303f, transparent: true, opacity: 0.85 })));
+          const overlayMat = (hex, op) => { const m = new mat.constructor({ color: hex, transparent: true, opacity: op, shininess: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); if(m.specular) m.specular.set("#000000"); return m; };
+          merged(LAND50.filter(f => MIXRAW.has(f.n)), g => { const m = new Mesh(g, overlayMat(0xf0aa50, 0.24)); m.scale.setScalar(1.003); world.scene().add(m); });
+          // The open country: a stronger wash and a red outline
+          const hlMat = overlayMat(0xeb8c28, 0.36), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
+          window.setHL = raw => {
+            hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
+            if(!raw) return;
+            const feats = LAND50.filter(f => f.n === raw); if(!feats.length) return;
+            const rings = []; feats.forEach(f => f.geometry.coordinates.forEach(pc => pc.forEach(r => rings.push(r))));
+            const line = new Seg(segs(rings, 100.36), hlLine); world.scene().add(line); hlObjs.push(line);
+            merged(feats, g => { if(hlWant !== raw){ g.dispose(); return; } const m = new Mesh(g, hlMat); m.scale.setScalar(1.003); world.scene().add(m); hlObjs.push(m); });
+          };
+          if(HLRAW) setHL(HLRAW);
+        });
+      };
+      probe();
+    }).catch(e => console.warn(e));
   });
 })();
 (function guilloche(){
@@ -239,8 +304,8 @@ function updatePinClasses(){
   world.ringColor(ringCol());
   CITY_LABELS.forEach(l => { if(l.el) l.el.classList.toggle("on", l.c === activeCity); });
   const hl = activeCountry || (activeCity && activeCity.ci);
-  HLFEAT = hl && hl.feat ? hl.feat : null;
-  world.polygonsData([...MIXFEATS.filter(f => f !== HLFEAT), ...(HLFEAT ? [HLFEAT] : [])]);
+  const raw = hl && hl.raw ? hl.raw : (hl && hl.feat ? (COUNTRY.find(k => k.feat === hl.feat) || {}).raw : null);
+  if(raw !== HLRAW){ HLRAW = raw || null; if(window.setHL) setHL(HLRAW); }
 }
 function flyTo(t){
   fitGlobe();

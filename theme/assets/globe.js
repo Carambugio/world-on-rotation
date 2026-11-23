@@ -85,7 +85,7 @@ function labelEl(d){
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
   if(d.kind === "city"){
     const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
-    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
     const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
   }

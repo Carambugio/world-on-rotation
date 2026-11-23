@@ -210,7 +210,7 @@ function wor_qa_questions() {
 		2 => 'What makes its music different from anywhere else, and what stands out in the scene right now?',
 		3 => 'Which tracks or artists in your mix should we hear first, and who else from there deserves more attention?',
 		4 => 'Tell us about a moment, a night or a person that sums up your connection to this music.',
-		5 => 'What do people get wrong about this music?',
+		5 => 'What do people get wrong about the place your mix comes from, and about its music?',
 		6 => 'How do traditional and contemporary sounds feed into each other there?',
 		7 => 'How has this music changed, where is it heading, and what part do you play in it?',
 	);

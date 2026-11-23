@@ -203,15 +203,29 @@ function wor_match_place( $text ) {
 	return $p && 'publish' === $p->post_status ? (int) $p->ID : 0;
 }
 
-/** The optional questions on the submission form. {place} becomes the place the selector names. */
+/** The optional questions on the submission form, from Marco's original Q&A. {country} becomes the country of the place the selector names. */
 function wor_qa_questions() {
 	return array(
-		1 => 'How did you first fall into this music?',
-		2 => 'If you could keep only one record from this mix, which would it be, and why?',
-		3 => 'Tell us about a night, a dancefloor or a gig that changed the way you hear it.',
-		4 => 'Where would you take a friend to hear this music live?',
-		5 => 'Who’s making this music right now that we should all be listening to?',
+		1  => 'Can you tell us about who you are, what you do and your personal connection to {country}? How has it influenced your musical journey?',
+		2  => 'When it comes to the music scene in {country}, what are some unique characteristics or trends that stand out to you?',
+		3  => 'Your playlist or mix reflects your idea of {country}’s music. Could you highlight a few tracks or artists from it that you find particularly exciting or representative of the current music scene?',
+		4  => 'How do you think the music of {country} has evolved over the years, and what role do you see yourself playing in its development?',
+		5  => 'In your opinion, what makes {country}’s music distinct or different from other regions, and how does it resonate with audiences worldwide?',
+		6  => '{Country} has a rich and diverse musical heritage. Could you share a personal anecdote or experience that epitomises your connection to the country’s music?',
+		7  => 'What stereotypes related to {country}’s music do you hope to challenge and debunk?',
+		8  => 'Your playlist or mix showcases a blend of traditional and contemporary music. How do you see these two facets influencing and complementing each other within the country’s music landscape?',
+		9  => 'Are there any emerging artists or genres from {country} that you believe deserve more international recognition? If so, could you share some recommendations?',
+		10 => 'Looking ahead, what upcoming trends or developments do you anticipate in {country}’s music scene, and how do you envision your ongoing involvement in promoting these trends?',
 	);
+}
+
+/** Put the country into a question: the part of the place after the last comma, or the place itself. */
+function wor_qa_fill( $q, $place ) {
+	$country = '' === trim( (string) $place ) ? '' : trim( substr( strrchr( ',' . $place, ',' ), 1 ) );
+	if ( '' === $country ) {
+		return str_replace( array( '{Country}’s', '{country}’s', '{Country}', '{country}' ), array( 'The country’s', 'the country’s', 'The country', 'the country' ), $q );
+	}
+	return str_replace( array( '{Country}', '{country}' ), $country, $q );
 }
 
 function wor_field( $name, $label, $attrs = '', $help = '', $type = 'text', $value = '' ) {
@@ -272,7 +286,7 @@ add_shortcode( 'wor_submit', function () {
 	$out .= '</fieldset>';
 	$out .= '<fieldset><legend>Quick Q&amp;A (optional)</legend><p class="qa-intro">Answer any of these, or none. A few lines each is plenty. Your answers appear on the mix page.</p>';
 	foreach ( wor_qa_questions() as $i => $q ) {
-		$out .= wor_field( 'qa' . $i, str_replace( '{place}', 'this place', $q ), 'maxlength="700" rows="3"', '', 'textarea' );
+		$out .= wor_field( 'qa' . $i, wor_qa_fill( $q, '' ), 'maxlength="1500" rows="4"', '', 'textarea' );
 	}
 	$out .= '</fieldset>';
 	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on its Mixcloud and on this site, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
@@ -423,9 +437,9 @@ function wor_handle_submit() {
 	update_post_meta( $mix_id, '_wor_tracklist', $tracks );
 	$qa = array();
 	foreach ( wor_qa_questions() as $i => $q ) {
-		$a = trim( preg_replace( '/\s+/', ' ', $p( 'qa' . $i, 700 ) ) );
+		$a = trim( preg_replace( '/\s+/', ' ', $p( 'qa' . $i, 1500 ) ) );
 		if ( '' !== $a ) {
-			$qa[] = str_replace( '{place}', trim( strtok( $place, ',' ) ), $q ) . "\n" . $a;
+			$qa[] = wor_qa_fill( $q, $place ) . "\n" . $a;
 		}
 	}
 	if ( $qa ) {

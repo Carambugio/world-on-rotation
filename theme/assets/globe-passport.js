@@ -965,20 +965,67 @@ function byRail(a, b){
   if(RAIL_NET.has(x) && RAIL_NET.has(y)) return true;
   return x === y && (RAIL_HOME.has(x) || RAIL_NET.has(x));
 }
-function routeMode(a, b){
-  const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]), ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
-  if(!LANDMASK) return "plane";
-  const n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
-  for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
-  const seaFrac = sea / (n - 1);
-  if(seaFrac < 0.06){
-    if(byRail(a, b) && D < 0.95) return "train";   // up to about 6,000 km on a connected network
-    if(D < 0.55) return "bus";                      // up to about 3,500 km by road
-    return "plane";
+/* Overland routes follow the land: a shortest path over a land map, which may hop short stretches of water
+   (a tunnel, a bridge, a ferry) but never more than about 70 km in all */
+function landPath(a, b){
+  const M = LANDMASK; if(!M || Math.abs(a.lon - b.lon) > 180) return null;
+  const cw = 360 / M.w, toX = lon => Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), toY = lat => Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0));
+  let x0 = toX(a.lon), y0 = toY(a.lat), x1 = toX(b.lon), y1 = toY(b.lat);
+  const pad = Math.round(8 / cw), bx0 = Math.max(0, Math.min(x0, x1) - pad), bx1 = Math.min(M.w - 1, Math.max(x0, x1) + pad), by0 = Math.max(0, Math.min(y0, y1) - pad), by1 = Math.min(M.h - 1, Math.max(y0, y1) + pad);
+  const BW = bx1 - bx0 + 1, N = BW * (by1 - by0 + 1), land = (x, y) => M.a[y * M.w + x] === 1;
+  const snap = (x, y) => { if(land(x, y)) return [x, y]; for(let r = 1; r <= 6; r++) for(let dy = -r; dy <= r; dy++) for(let dx = -r; dx <= r; dx++){ const X = x + dx, Y = y + dy; if(X >= bx0 && X <= bx1 && Y >= by0 && Y <= by1 && land(X, Y)) return [X, Y]; } return [x, y]; };
+  [x0, y0] = snap(x0, y0); [x1, y1] = snap(x1, y1);
+  const kmY = 111.2 * cw, kmX = y => kmY * Math.max(0.05, Math.cos((90 - (y + 0.5) / M.h * 180) * Math.PI / 180));
+  const id = (x, y) => (y - by0) * BW + (x - bx0), hcost = (x, y) => Math.hypot((x - x1) * kmX(y), (y - y1) * kmY);
+  const g = new Float32Array(N).fill(Infinity), wet = new Float32Array(N), prev = new Int32Array(N).fill(-1), done = new Uint8Array(N);
+  const hp = [], hf = [];
+  const push = (n, f) => { hp.push(n); hf.push(f); let i = hp.length - 1; while(i > 0){ const q = (i - 1) >> 1; if(hf[q] <= hf[i]) break; [hp[q], hp[i]] = [hp[i], hp[q]]; [hf[q], hf[i]] = [hf[i], hf[q]]; i = q; } };
+  const pop = () => { const top = hp[0], ln = hp.pop(), lf = hf.pop(); if(hp.length){ hp[0] = ln; hf[0] = lf; let i = 0; for(;;){ const l = 2 * i + 1, r = l + 1; let m = i; if(l < hp.length && hf[l] < hf[m]) m = l; if(r < hp.length && hf[r] < hf[m]) m = r; if(m === i) break; [hp[m], hp[i]] = [hp[i], hp[m]]; [hf[m], hf[i]] = [hf[i], hf[m]]; i = m; } } return top; };
+  const s0 = id(x0, y0), goal = id(x1, y1); g[s0] = 0; push(s0, hcost(x0, y0));
+  let found = false, it = 0;
+  while(hp.length && it++ < 400000){
+    const n = pop(); if(done[n]) continue; done[n] = 1; if(n === goal){ found = true; break; }
+    const x = n % BW + bx0, y = (n / BW | 0) + by0;
+    for(let dy = -1; dy <= 1; dy++) for(let dx = -1; dx <= 1; dx++){
+      if(!dx && !dy) continue; const X = x + dx, Y = y + dy; if(X < bx0 || X > bx1 || Y < by0 || Y > by1) continue;
+      const m = id(X, Y); if(done[m]) continue;
+      const km = Math.hypot(dx * kmX(y), dy * kmY), sea = !land(X, Y), w = wet[n] + (sea ? km : 0);
+      if(w > 70) continue;
+      const c = g[n] + km * (sea ? 8 : 1);
+      if(c < g[m]){ g[m] = c; wet[m] = w; prev[m] = n; push(m, c + hcost(X, Y)); }
+    }
   }
-  if(seaFrac > 0.6) return "boat";
-  return "plane";
+  if(!found) return null;
+  let pts = []; for(let n = goal; n !== -1; n = prev[n]) pts.push([(n % BW + bx0 + 0.5) * cw - 180, 90 - ((n / BW | 0) + by0 + 0.5) * cw]);
+  pts.reverse(); pts[0] = [a.lon, a.lat]; pts[pts.length - 1] = [b.lon, b.lat];
+  // simplify, then round the corners
+  const dp = (P, tol) => { if(P.length < 3) return P; let md = 0, mi = 0; const [ax, ay] = P[0], [bx, by] = P[P.length - 1], L = Math.hypot(bx - ax, by - ay) || 1e-9;
+    for(let i = 1; i < P.length - 1; i++){ const d = Math.abs((bx - ax) * (ay - P[i][1]) - (ax - P[i][0]) * (by - ay)) / L; if(d > md){ md = d; mi = i; } }
+    return md > tol ? dp(P.slice(0, mi + 1), tol).slice(0, -1).concat(dp(P.slice(mi), tol)) : [P[0], P[P.length - 1]]; };
+  pts = dp(pts, cw * 1.6);
+  for(let k = 0; k < 3; k++){ const o = [pts[0]]; for(let i = 0; i < pts.length - 1; i++){ const [ax, ay] = pts[i], [bx, by] = pts[i + 1]; o.push([ax * 0.75 + bx * 0.25, ay * 0.75 + by * 0.25], [ax * 0.25 + bx * 0.75, ay * 0.25 + by * 0.75]); } o.push(pts[pts.length - 1]); pts = o; }
+  let km = 0; for(let i = 1; i < pts.length; i++) km += d3.geoDistance(pts[i - 1], pts[i]) * 6371;
+  return { line: pts, km };
 }
+const PLANS = new Map();
+function planRoute(a, b){
+  const key = a.city + ">" + b.city; if(LANDMASK && PLANS.has(key)) return PLANS.get(key);
+  if(!LANDMASK) return { mode: "plane", line: null };
+  const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]), straight = D * 6371;
+  let res = null;
+  const lp = straight < 7000 ? landPath(a, b) : null;
+  if(lp && lp.km < straight * 2 + 300){
+    if(byRail(a, b) && lp.km < 7000) res = { mode: "train", line: lp.line };
+    else if(lp.km < 4500) res = { mode: "bus", line: lp.line };
+  }
+  if(!res){
+    const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
+    for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
+    res = { mode: sea / (n - 1) > 0.6 ? "boat" : "plane", line: null };
+  }
+  PLANS.set(key, res); return res;
+}
+function routeMode(a, b){ return planRoute(a, b).mode; }
 // A road or railway winds a little, the way real ones do; the same line every time for the same two places
 function windingLine(a, b){
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 180 / Math.PI, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
@@ -996,10 +1043,10 @@ function windingLine(a, b){
 let BASEPATHS = [], ROUTEPATHS = [];
 function setPaths(){ world.pathsData(BASEPATHS.concat(ROUTEPATHS)); }
 // Draw the route: a railway or a road for land, a dotted line for sea and air
-function drawRoute(a, b, mode){
+function drawRoute(a, b, mode, given){
   let line = null; ROUTEPATHS = [];
   if(mode === "train" || mode === "bus"){
-    line = windingLine(a, b);
+    line = given || windingLine(a, b);
     const len = d3.geoLength({ type: "LineString", coordinates: line }) * 180 / Math.PI || 1;
     const lift = (pts, h) => { const x = pts.map(q => [q[0], q[1], h]); return x; };
     if(mode === "train"){
@@ -1023,7 +1070,7 @@ function flyPlane(a, b){
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
   if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
   if(!LANDMASK){ MASKWAIT = { from: a, to: b }; }
-  const mode = ROUTE.mode = routeMode(a, b), line = drawRoute(a, b, mode);
+  const plan = planRoute(a, b), mode = ROUTE.mode = plan.mode, line = drawRoute(a, b, mode, plan.line);
   PLANE.dataset.mode = mode;
   const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
   const v = (lng, lat, h) => { const r = 100 * (1 + h), la = lat * Math.PI / 180, ln = lng * Math.PI / 180; return [r * Math.cos(la) * Math.sin(ln), r * Math.sin(la), r * Math.cos(la) * Math.cos(ln)]; };
@@ -1070,7 +1117,7 @@ function playMix(p){
   const to = CITIES.find(x => x.city === p.city);
   const from = (TRAIL && TRAIL !== to) ? TRAIL : current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null);
   if(to) TRAIL = to;
-  if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const m = routeMode(from, to); ROUTE = { from, to, mode: m }; drawRoute(from, to, m); } }
+  if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const pl = planRoute(from, to); ROUTE = { from, to, mode: pl.mode }; drawRoute(from, to, pl.mode, pl.line); } }
   current = p;
   const bar = $("#bar");
   $("#bar-art").innerHTML = stamp(p, 44);

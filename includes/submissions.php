@@ -206,11 +206,11 @@ function wor_match_place( $text ) {
 /** The optional questions on the submission form. {place} becomes the place the selector names. */
 function wor_qa_questions() {
 	return array(
-		1 => 'Who are you, and what ties you to {place}?',
-		2 => 'Pick three tracks from the mix and tell us why they matter.',
-		3 => 'Is there a night, a record or a person that sums up your connection to this music?',
-		4 => 'What do people get wrong about music from {place}?',
-		5 => 'Who should we be listening to from {place} right now?',
+		1 => 'How did you first fall into this music?',
+		2 => 'If you could keep only one record from this mix, which would it be, and why?',
+		3 => 'Tell us about a night, a dancefloor or a gig that changed the way you hear it.',
+		4 => 'Where would you take a friend to hear this music live?',
+		5 => 'Who’s making this music right now that we should all be listening to?',
 	);
 }
 
@@ -255,7 +255,6 @@ add_shortcode( 'wor_submit', function () {
 		$out .= wor_field( 'alias', 'Name or alias', 'required maxlength="80" autocomplete="nickname"', 'How you want to appear on the site.', 'text', $inv['name'] ?? '' );
 		$out .= wor_field( 'fullname', 'Full name', 'maxlength="80" autocomplete="name"', 'Optional. Only if it differs from the name above and you want it shown.' );
 		$out .= wor_field( 'email', 'Email', 'required maxlength="120" autocomplete="email"', 'So we can tell you when your mix is live. Never shown on the site.', 'email' );
-		$out .= wor_field( 'nationality', 'Nationality', 'maxlength="60"' );
 		$out .= wor_field( 'base', 'Based in', 'required maxlength="80"', 'City and country, for example Lagos, Nigeria.' );
 		$out .= wor_field( 'role', 'What you do', 'maxlength="80"', 'For example: DJ and record collector, radio host, label owner.' );
 		$out .= wor_field( 'bio', 'Short bio', 'required maxlength="800" rows="5"', 'Up to 800 characters.', 'textarea' );
@@ -396,7 +395,6 @@ function wor_handle_submit() {
 		update_post_meta( $selector_id, '_wor_base', $base );
 		update_post_meta( $selector_id, '_wor_role', $p( 'role', 80 ) );
 		update_post_meta( $selector_id, '_wor_links', implode( "\n", $lines ) );
-		update_post_meta( $selector_id, '_wor_nationality', $p( 'nationality', 60 ) );
 		update_post_meta( $selector_id, '_wor_fullname', $p( 'fullname', 80 ) );
 		update_post_meta( $selector_id, '_wor_email', $email );
 		update_post_meta( $selector_id, '_wor_submitted', 1 );

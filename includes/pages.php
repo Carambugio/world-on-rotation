@@ -60,7 +60,7 @@ function wor_create_pages() {
 	// Fingerprints of earlier bundled versions of each page.
 	$previous = array(
 		'about'          => array( 'cf2577b6d6cb4a4790d38eacf11f775e', 'f4d6d6999692ba725ce8ede38571e614', '343e23efd72ad51a3b3613a3ad499768', '30af00ecc004352a0360cd0f265e9ce7' ),
-		'privacy-policy' => array( '77ccbe770afff0fb97306239826f3a81', '13fabfd85a7d7afcc1014971ad7c19c3' ),
+		'privacy-policy' => array( '77ccbe770afff0fb97306239826f3a81', '13fabfd85a7d7afcc1014971ad7c19c3', '018c5da2495cbe0f58d6c74fc601c2f2' ),
 		'cookies'        => array( 'd97b0c56393eb8f6408d335c50e50f5f' ),
 		'submit'         => array(),
 	);

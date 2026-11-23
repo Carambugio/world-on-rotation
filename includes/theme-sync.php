@@ -81,5 +81,17 @@ function wor_sync_theme() {
 		}
 	}
 	update_option( 'wor_theme_synced', $bundled );
+	wor_purge_caches();
+}
+
+/** Clear page caches after an update, so visitors get the new version straight away. */
+function wor_purge_caches() {
+	do_action( 'litespeed_purge_all' );                 // LiteSpeed Cache, used by Hostinger
+	if ( function_exists( 'wp_cache_flush' ) ) {
+		wp_cache_flush();                                // object cache
+	}
+	if ( has_action( 'hostinger_purge_all_cache' ) ) {
+		do_action( 'hostinger_purge_all_cache' );
+	}
 }
 add_action( 'init', 'wor_sync_theme', 5 );

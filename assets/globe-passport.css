@@ -474,3 +474,8 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city .pm,.glabel.city .pm text{text-shadow:none!important}
 .glabel.city .pm text{font-weight:700;paint-order:normal;stroke:none!important}
 .glabel.city .pm{opacity:1!important}
+
+/* A paper rim around each stamp so it stays clear over the sea */
+.glabel.city .pm .halo{fill:#f6efe2;stroke:rgba(20,28,44,.35);stroke-width:.5}
+.glabel.city .pm .o{fill:#f6efe2}
+.glabel.city .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))}

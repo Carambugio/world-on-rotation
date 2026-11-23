@@ -85,7 +85,7 @@ function labelEl(d){
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
   if(d.kind === "city"){
     const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
-    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
     const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
   }
@@ -249,10 +249,7 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           };
           setVisited();
           // The open country: a stronger wash and a red outline
-          const hlMat = overlayMat(0xa3302b, 0.8);
-          // the open country: red diagonal hatching, like a visa stamped across the page
-          hlMat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  if(mod(gl_FragCoord.x + gl_FragCoord.y, 10.0) > 3.0) discard;"); };
-          hlMat.customProgramCacheKey = () => "wor-hatch", hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
+          const hlMat = overlayMat(0xa3302b, 0.22), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {
             hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
             if(!raw || !LAND50) return;

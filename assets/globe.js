@@ -400,6 +400,7 @@ function cityGuide(name){
 }
 function openCity(city, playlistId){
   const c = CITIES.find(x=>x.city===city); if(!c) return;
+  if(activeCity && activeCity !== c) TRAIL = activeCity;
   activeCity = c; activeCountry = null;
   if(ROUTE && ROUTE.to === c && !FLIGHT && !introOn) flyPlane(ROUTE.from, ROUTE.to);
   const sel = playlistId || (player.id && c.items.some(i=>i.id===player.id) ? player.id : c.items[0].id);
@@ -455,6 +456,7 @@ function showPlaylist(id, autoplay){
 }
 function closePanel(){
   $("#panel").hidden = true; app.classList.remove("is-open");
+  if(activeCity) TRAIL = activeCity;
   activeCity = null; activeCountry = null; cueTarget = null;
   updatePinClasses(); updateNow(); dirty = true; lastInteract = performance.now(); recenter();
 }
@@ -855,11 +857,12 @@ PLANE.innerHTML =
   '<svg class="v-train" viewBox="0 0 50 30" aria-hidden="true"><g class="puffs"><circle class="puff p1" cx="33.5" cy="5" r="2.2"/><circle class="puff p2" cx="31" cy="3" r="1.7"/><circle class="puff p3" cx="28.5" cy="1.8" r="1.3"/></g><g class="b"><path d="M2 8.2h14.5v-1.8H2z"/><rect x="3.2" y="8.2" width="12" height="13" rx=".8"/><rect x="15" y="12" width="22" height="9.2" rx="4.6"/><path d="M21 12.2a3.2 3.2 0 0 1 6.4 0z"/><path d="M30.6 12.4V9.6h-1.1l.9-2.9h5.2l.9 2.9h-1.1v2.8z"/><path d="M37 16.2h1.8l5.4 6.4h-7.2z"/><rect x="2.4" y="21" width="36" height="2.2" rx=".6"/></g><g class="win"><rect x="6" y="10.6" width="6.2" height="4.8" rx=".7"/><circle cx="38.3" cy="14.3" r="1.35"/><rect x="21.2" y="12.6" width=".9" height="8.4"/><rect x="28.6" y="12.6" width=".9" height="8.4"/></g><g class="wh"><circle cx="8.6" cy="24.6" r="2.9"/><circle cx="19.6" cy="24" r="3.9"/><circle cx="29" cy="24" r="3.9"/><circle cx="35.6" cy="25" r="2.4"/></g><g class="hub"><circle cx="8.6" cy="24.6" r=".9"/><circle cx="19.6" cy="24" r="1.1"/><circle cx="29" cy="24" r="1.1"/><circle cx="35.6" cy="25" r=".8"/></g><path class="rod" d="M19.6 25.2H29"/></svg>' +
   '<svg class="v-boat" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><path d="M1.5 12.5h31l-4.5 6.5H6z"/><rect x="8" y="7" width="14" height="5.5" rx=".8"/><rect x="15" y="2" width="4" height="5.5" rx=".6"/></g><g class="win"><circle cx="11" cy="9.7" r="1"/><circle cx="14.5" cy="9.7" r="1"/><circle cx="18" cy="9.7" r="1"/></g></svg>' +
   '<svg class="v-bus" viewBox="0 0 44 24" aria-hidden="true"><g class="b"><path d="M3 5.5c0-1.4 1.1-2.5 2.5-2.5h29c2.4 0 4.3 1.4 5 3.6l1.6 5.4c.3.9.4 1.8.4 2.7V17c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2z"/><rect x="2.2" y="15.2" width="40.6" height="1.6" rx=".6"/></g><g class="win"><rect x="6" y="6" width="6" height="5" rx=".8"/><rect x="13.6" y="6" width="6" height="5" rx=".8"/><rect x="21.2" y="6" width="6" height="5" rx=".8"/><path d="M29 6h5.6c1.2 0 2.2.8 2.6 1.9l1 3.1H29z"/></g><g class="wh"><circle cx="11" cy="19" r="3"/><circle cx="33" cy="19" r="3"/></g><g class="hub"><circle cx="11" cy="19" r="1"/><circle cx="33" cy="19" r="1"/></g></svg>';
-let FLIGHT = null, ROUTE = null, LANDMASK = null;
+let FLIGHT = null, ROUTE = null, LANDMASK = null, TRAIL = null, MASKWAIT = null;
 new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = WOR.img + "land-mask.png" + IMGV; }).then(im => {
   const cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
   const g = cv.getContext("2d"); g.drawImage(im, 0, 0);
   try { const d = g.getImageData(0, 0, im.width, im.height).data, a = new Uint8Array(im.width * im.height); for(let k = 0; k < a.length; k++) a[k] = d[k * 4] > 127 ? 1 : 0; LANDMASK = { w: im.width, h: im.height, a }; } catch(e){}
+  if(MASKWAIT){ const w = MASKWAIT; MASKWAIT = null; if(activeCity === w.to) flyPlane(w.from, w.to); }
 }).catch(() => {});
 function isLand(lon, lat){ const M = LANDMASK; if(!M) return true; const x = Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), y = Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0)); return M.a[y * M.w + x] === 1; }
 // Rail: the connected Eurasian network, plus countries with passenger trains of their own. Elsewhere overland is by bus.
@@ -928,6 +931,7 @@ function flyPlane(a, b){
   ROUTE = { from: a, to: b };
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
   if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
+  if(!LANDMASK){ MASKWAIT = { from: a, to: b }; }
   const mode = ROUTE.mode = routeMode(a, b), line = drawRoute(a, b, mode);
   PLANE.dataset.mode = mode;
   const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
@@ -972,7 +976,9 @@ function flyPlane(a, b){
   PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc * flip}, ${sc})`;
 })();
 function playMix(p){
-  const from = current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null), to = CITIES.find(x => x.city === p.city);
+  const to = CITIES.find(x => x.city === p.city);
+  const from = (TRAIL && TRAIL !== to) ? TRAIL : current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null);
+  if(to) TRAIL = to;
   if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const m = routeMode(from, to); ROUTE = { from, to, mode: m }; drawRoute(from, to, m); } }
   current = p;
   const bar = $("#bar");

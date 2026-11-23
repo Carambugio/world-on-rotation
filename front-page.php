@@ -29,19 +29,19 @@ $wort_data['img']   = $wort_uri . '/assets/img/';
 $wort_data['v']     = $wort_ver;
 $wort_data['t']     = wort_t_all();
 
-// Design preview: anyone can open ?design=passport. Editors also get their choice remembered for 30 days;
-// visitors do not, so a cached page never mixes the two designs.
-$wort_design = '';
+// The passport design is the main one. ?design=current shows the earlier satellite design: anyone can open it,
+// editors also get the choice remembered for 30 days (?design=passport switches back).
+$wort_design = 'passport';
 $wort_q      = isset( $_GET['design'] ) ? sanitize_key( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 if ( current_user_can( 'edit_posts' ) ) {
 	if ( '' !== $wort_q ) {
-		$wort_design = 'passport' === $wort_q ? 'passport' : '';
-		setcookie( 'wor_design', $wort_design, $wort_design ? time() + 30 * DAY_IN_SECONDS : time() - 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
-	} elseif ( isset( $_COOKIE['wor_design'] ) && 'passport' === $_COOKIE['wor_design'] ) {
-		$wort_design = 'passport';
+		$wort_design = 'current' === $wort_q ? '' : 'passport';
+		setcookie( 'wor_design', $wort_design ? '' : 'current', $wort_design ? time() - 3600 : time() + 30 * DAY_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+	} elseif ( isset( $_COOKIE['wor_design'] ) && 'current' === $_COOKIE['wor_design'] ) {
+		$wort_design = '';
 	}
-} elseif ( 'passport' === $wort_q ) {
-	$wort_design = 'passport';
+} elseif ( 'current' === $wort_q ) {
+	$wort_design = '';
 }
 $wort_globe = $wort_design ? 'globe-passport' : 'globe';
 ?><!doctype html>
@@ -53,7 +53,7 @@ $wort_globe = $wort_design ? 'globe-passport' : 'globe';
 <meta name="description" content="<?php echo esc_attr( wort_t( 'share_text' ) ); ?>">
 <meta property="og:title" content="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>">
 <meta property="og:description" content="<?php echo esc_attr( wort_t( 'share_text' ) ); ?>">
-<meta name="theme-color" content="#070c14">
+<meta name="theme-color" content="#0e1c30">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,0..100&amp;family=Londrina+Solid:wght@400;900&amp;family=Special+Elite&amp;family=Instrument+Sans:wght@400..600&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Barlow+Condensed:wght@500;600&amp;display=swap">
@@ -96,8 +96,8 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 <script src="<?php echo esc_url( $wort_uri . '/assets/geo.js?ver=' . $wort_ver ); ?>"></script>
 <script>window.WOR = <?php echo wp_json_encode( $wort_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); ?>;</script>
 <script src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
-<?php if ( $wort_design ) : ?>
-<a href="<?php echo esc_url( add_query_arg( 'design', 'current', home_url( '/' ) ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Passport design preview · back to current</a>
+<?php if ( ! $wort_design ) : ?>
+<a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Earlier design · back to the new one</a>
 <?php endif; ?>
 <?php wp_footer(); ?>
 </body>

@@ -489,6 +489,7 @@ function cityGuide(name){
 function openCity(city, playlistId){
   const c = CITIES.find(x=>x.city===city); if(!c) return;
   activeCity = c; activeCountry = null;
+  if(ROUTE && ROUTE.to === c && !FLIGHT && !introOn) flyPlane(ROUTE.from, ROUTE.to);
   const sel = playlistId || (player.id && c.items.some(i=>i.id===player.id) ? player.id : c.items[0].id);
   const lt = localTime(c.tz);
   openPanel(`
@@ -940,20 +941,25 @@ intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); 
 /* ---------- A small plane flies the route when a mix starts, on the same curve as the route line ---------- */
 const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
 PLANE.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>';
-let FLIGHT = null;
+let FLIGHT = null, ROUTE = null;
+// The plane keeps flying the route, again and again, for as long as its destination is the selected place
 function flyPlane(a, b){
+  ROUTE = { from: a, to: b };
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
   if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
   const alt = D / 2 * 0.42, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
   const v = (lng, lat, h) => { const r = 100 * (1 + h), la = lat * Math.PI / 180, ln = lng * Math.PI / 180; return [r * Math.cos(la) * Math.sin(ln), r * Math.sin(la), r * Math.cos(la) * Math.cos(ln)]; };
   const m1 = ip(0.25), m2 = ip(0.75);
-  FLIGHT = { P: [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)], t0: performance.now(), dur: Math.min(5600, 2400 + D * 1500) };
+  FLIGHT = { P: [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)], t0: performance.now(), dur: Math.min(12000, 5200 + D * 3200), to: b };
 }
 (function planeTick(){
   requestAnimationFrame(planeTick);
   if(!FLIGHT){ if(!PLANE.hidden) PLANE.hidden = true; return; }
-  const t = (performance.now() - FLIGHT.t0) / FLIGHT.dur;
-  if(t >= 1){ FLIGHT = null; return; }
+  const stay = activeCity && activeCity === FLIGHT.to;
+  if(stay) FLIGHT.seen = true; else if(FLIGHT.seen){ FLIGHT = null; PLANE.hidden = true; return; } // the place was closed: the plane goes
+  let t = (performance.now() - FLIGHT.t0) / FLIGHT.dur;
+  if(t >= 1){ if(stay){ FLIGHT.t0 = performance.now() + 700; } else { FLIGHT = null; } return; }
+  if(t < 0){ PLANE.hidden = true; if(!stay) FLIGHT = null; return; }
   const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   const bez = (P, k) => { const u = 1 - k; return [0, 1, 2].map(i => u * u * u * P[0][i] + 3 * u * u * k * P[1][i] + 3 * u * k * k * P[2][i] + k * k * k * P[3][i]); };
   const lla = q => { const r = Math.hypot(q[0], q[1], q[2]); return [Math.asin(q[1] / r) * 180 / Math.PI, Math.atan2(q[0], q[2]) * 180 / Math.PI, r / 100 - 1]; };

@@ -203,26 +203,23 @@ function wor_match_place( $text ) {
 	return $p && 'publish' === $p->post_status ? (int) $p->ID : 0;
 }
 
-/** The optional questions on the submission form, from Marco's original Q&A. {country} becomes the country of the place the selector names. */
+/** The optional questions on the submission form. {place} becomes the place the mix belongs to, as the selector names it. */
 function wor_qa_questions() {
 	return array(
-		1 => 'Who are you, what do you do, and what ties you to {country}?',
-		2 => 'What makes {country}’s music different from anywhere else, and what stands out in the scene right now?',
-		3 => 'Which tracks or artists in your mix should we hear first, and who else from {country} deserves more attention?',
+		1 => 'Who are you, what do you do, and what ties you to {place}?',
+		2 => 'What makes the music of {place} different from anywhere else, and what stands out in the scene right now?',
+		3 => 'Which tracks or artists in your mix should we hear first, and who else from {place} deserves more attention?',
 		4 => 'Tell us about a moment, a night or a person that sums up your connection to this music.',
-		5 => 'What do people get wrong about {country}’s music?',
-		6 => 'How do traditional and contemporary music feed into each other in {country}?',
-		7 => 'How has the music of {country} changed, where is it heading, and what part do you play in it?',
+		5 => 'What do people get wrong about the music of {place}?',
+		6 => 'How do traditional and contemporary music feed into each other in {place}?',
+		7 => 'How has the music of {place} changed, where is it heading, and what part do you play in it?',
 	);
 }
 
-/** Put the country into a question: the part of the place after the last comma, or the place itself. */
+/** Put the place into a question: the first part of what the selector typed ("Naples" from "Naples, Italy"). */
 function wor_qa_fill( $q, $place ) {
-	$country = '' === trim( (string) $place ) ? '' : trim( substr( strrchr( ',' . $place, ',' ), 1 ) );
-	if ( '' === $country ) {
-		return str_replace( array( '{Country}’s', '{country}’s', '{Country}', '{country}' ), array( 'The country’s', 'the country’s', 'The country', 'the country' ), $q );
-	}
-	return str_replace( array( '{Country}', '{country}' ), $country, $q );
+	$name = trim( (string) strtok( (string) $place, ',' ) );
+	return str_replace( '{place}', '' === $name ? 'the place' : $name, $q );
 }
 
 function wor_field( $name, $label, $attrs = '', $help = '', $type = 'text', $value = '' ) {

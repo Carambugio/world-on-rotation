@@ -956,15 +956,41 @@ new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerr
   if(MASKWAIT){ const w = MASKWAIT; MASKWAIT = null; if(activeCity === w.to) flyPlane(w.from, w.to); }
 }).catch(() => {});
 function isLand(lon, lat){ const M = LANDMASK; if(!M) return true; const x = Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), y = Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0)); return M.a[y * M.w + x] === 1; }
-// Rail: the connected Eurasian network, plus countries with passenger trains of their own. Elsewhere overland is by bus.
-const RAIL_NET = new Set(["United Kingdom","Ireland","France","Belgium","Netherlands","Luxembourg","Germany","Denmark","Norway","Sweden","Finland","Poland","Czechia","Slovakia","Austria","Switzerland","Italy","Slovenia","Croatia","Bosnia & Herz.","Serbia","Montenegro","North Macedonia","Albania","Greece","Bulgaria","Romania","Hungary","Moldova","Ukraine","Belarus","Lithuania","Latvia","Estonia","Spain","Portugal","Türkiye","Georgia","Armenia","Azerbaijan","Russia","Kazakhstan","Uzbekistan","Kyrgyzstan","Tajikistan","Turkmenistan","Mongolia","China","Vietnam","Laos"]);
-const RAIL_HOME = new Set(["India","Pakistan","Bangladesh","Sri Lanka","Japan","South Korea","Taiwan","Thailand","Malaysia","Indonesia","Iran","Egypt","Morocco","Algeria","Tunisia","South Africa","Kenya","Tanzania","Ethiopia","United States","Canada","Mexico","Argentina","Australia","New Zealand","Saudi Arabia"]);
-const cname = c => c && c.ci ? c.ci.name : (c ? c.country : "");
-function byRail(a, b){
-  const x = cname(a), y = cname(b);
-  if(RAIL_NET.has(x) && RAIL_NET.has(y)) return true;
-  return x === y && (RAIL_HOME.has(x) || RAIL_NET.has(x));
-}
+/* Real connections (checked November 2026). Trains only where passenger trains run, across borders only where an
+   international passenger service runs. Buses where scheduled coaches run, with changes, inside regions whose borders
+   are open to them. Everything else flies, or sails when the way is mostly sea. */
+const ZONE = list => new Set(list.split("|"));
+const RAIL_NETS = [
+  // Europe, joined to the UK by the Channel Tunnel and to Istanbul by the Sofia sleeper
+  ZONE("United Kingdom|France|Belgium|Netherlands|Luxembourg|Germany|Denmark|Norway|Sweden|Finland|Poland|Czechia|Slovakia|Austria|Switzerland|Italy|Slovenia|Croatia|Hungary|Romania|Bulgaria|Serbia|Montenegro|Spain|Portugal|Lithuania|Latvia|Estonia|Ukraine|Moldova|Turkey|Türkiye"),
+  ZONE("Georgia|Azerbaijan|Armenia"),                                    // Tbilisi–Baku (resumed May 2026), Tbilisi–Yerevan
+  ZONE("Russia|Belarus|Kazakhstan|Uzbekistan|Kyrgyzstan|Tajikistan|Turkmenistan|Mongolia|China|Vietnam|Laos|Thailand|Malaysia"),
+  ZONE("Ethiopia|Djibouti"),                                            // Addis Ababa–Djibouti
+  ZONE("Tanzania|Zambia"),                                              // TAZARA (resumed 2026)
+  ZONE("United States of America|United States|Canada")                 // Amtrak and VIA Rail
+];
+// Countries with intercity passenger trains of their own
+const RAIL_HOME = ZONE("Ireland|Greece|Macedonia|North Macedonia|Bosnia and Herz.|Bosnia & Herz.|Iran|India|Pakistan|Bangladesh|Sri Lanka|Japan|South Korea|Taiwan|Indonesia|Vietnam|Morocco|Algeria|Tunisia|Egypt|Kenya|Nigeria|Cameroon|Gabon|Congo|Angola|Mozambique|South Africa|Zimbabwe|Botswana|Namibia|Mexico|Argentina|Chile|Peru|Australia|New Zealand|Saudi Arabia|Uzbekistan|Ukraine");
+const BUS_ZONES = [
+  ZONE("United Kingdom|Ireland|France|Belgium|Netherlands|Luxembourg|Germany|Denmark|Norway|Sweden|Finland|Poland|Czechia|Slovakia|Austria|Switzerland|Italy|Slovenia|Croatia|Bosnia and Herz.|Bosnia & Herz.|Serbia|Montenegro|Kosovo|Albania|Macedonia|North Macedonia|Greece|Hungary|Romania|Bulgaria|Spain|Portugal|Lithuania|Latvia|Estonia|Ukraine|Moldova|Turkey|Türkiye|Georgia|Armenia|Iran"),
+  ZONE("Russia|Belarus|Kazakhstan|Kyrgyzstan|Uzbekistan|Tajikistan|Mongolia|Georgia"),
+  ZONE("Lebanon|Syria|Jordan"),
+  ZONE("Saudi Arabia|United Arab Emirates|Oman|Qatar|Kuwait|Jordan"),
+  ZONE("Iraq|Turkey|Türkiye|Iran"),
+  ZONE("Senegal|Gambia|Guinea-Bissau|Guinea|Sierra Leone|Liberia|Mali|Burkina Faso|Côte d'Ivoire|Ghana|Togo|Benin|Nigeria|Niger|Mauritania"),
+  ZONE("Morocco|W. Sahara|Mauritania|Senegal"),
+  ZONE("Tunisia|Algeria|Libya"),
+  ZONE("Kenya|Uganda|Tanzania|Rwanda|Burundi|Ethiopia|Zambia|Malawi|Mozambique|Zimbabwe|Botswana|Namibia|South Africa|Lesotho|eSwatini"),
+  ZONE("India|Nepal|Bhutan"),
+  ZONE("Thailand|Laos|Cambodia|Vietnam|Malaysia|China"),
+  ZONE("United States of America|United States|Canada|Mexico|Guatemala|Belize|El Salvador|Honduras|Nicaragua|Costa Rica|Panama"),
+  ZONE("Colombia|Venezuela|Ecuador|Peru|Bolivia|Chile|Argentina|Uruguay|Paraguay|Brazil")
+];
+const names = c => c && c.ci ? [c.ci.raw, c.ci.name].filter(Boolean) : [c.country];
+const sameCountry = (a, b) => names(a).some(n => names(b).includes(n));
+const inBoth = (sets, a, b) => sets.some(z => names(a).some(n => z.has(n)) && names(b).some(n => z.has(n)));
+const byRail = (a, b) => inBoth(RAIL_NETS, a, b) || (sameCountry(a, b) && (names(a).some(n => RAIL_HOME.has(n)) || inBoth(RAIL_NETS, a, a)));
+const byBus = (a, b) => sameCountry(a, b) || inBoth(BUS_ZONES, a, b);
 /* Overland routes follow the land: a shortest path over a land map, which may hop short stretches of water
    (a tunnel, a bridge, a ferry) but never more than about 70 km in all */
 function landPath(a, b){
@@ -1007,6 +1033,7 @@ function landPath(a, b){
   let km = 0; for(let i = 1; i < pts.length; i++) km += d3.geoDistance(pts[i - 1], pts[i]) * 6371;
   return { line: pts, km };
 }
+function coastal(c){ for(let r = 0.15; r <= 0.6; r += 0.15) for(let k = 0; k < 12; k++){ const t = k * Math.PI / 6; if(!isLand(c.lon + r * Math.cos(t) / Math.max(0.2, Math.cos(c.lat * Math.PI / 180)), c.lat + r * Math.sin(t))) return true; } return false; }
 const PLANS = new Map();
 function planRoute(a, b){
   const key = a.city + ">" + b.city; if(LANDMASK && PLANS.has(key)) return PLANS.get(key);
@@ -1014,14 +1041,15 @@ function planRoute(a, b){
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]), straight = D * 6371;
   let res = null;
   const lp = straight < 7000 ? landPath(a, b) : null;
-  if(lp && lp.km < straight * 2 + 300){
-    if(byRail(a, b) && lp.km < 7000) res = { mode: "train", line: lp.line };
-    else if(lp.km < 4500) res = { mode: "bus", line: lp.line };
+  if(lp && lp.km < straight * 1.8 + 200){
+    if(byRail(a, b) && lp.km < 6000) res = { mode: "train", line: lp.line };
+    else if(byBus(a, b) && lp.km < 2200) res = { mode: "bus", line: lp.line };
   }
   if(!res){
     const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
     for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
-    res = { mode: sea / (n - 1) > 0.6 ? "boat" : "plane", line: null };
+    // Ships only for shorter sea crossings between two ports: no passenger ships cross oceans
+    res = { mode: sea / (n - 1) > 0.6 && straight < 2500 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
   }
   PLANS.set(key, res); return res;
 }

@@ -293,9 +293,9 @@ function tidyLabels(){
       if(!d.w){ d.w = s.offsetWidth; d.h = s.offsetHeight; }
       if(d.kind === "city"){
         /* Places that would overlap merge into one stamp with a count; the place open or playing always stands alone */
-        const host = d.c === activeCity ? null : heads.find(h => h.c !== activeCity && Math.hypot(h.sx - x, h.sy - y) < 36);
+        const host = d.c === activeCity ? null : heads.find(h => h.c !== activeCity && Math.hypot(h.sx - x, h.sy - y) < 28);
         if(host){ host.members.push(d); d.members = null; show = false; }
-        else { d.sx = x; d.sy = y; d.members = [d]; heads.push(d); placed.push([x - 17, y - 17, x + 17 + d.w, y + 17]); }
+        else { d.sx = x; d.sy = y; d.members = [d]; heads.push(d); placed.push([x - 13, y - 13, x + 13 + d.w, y + 13]); }
       }
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
@@ -314,8 +314,8 @@ function tidyLabels(){
     if(grp){ const b = d.el.querySelector(".cnt"); if(b) b.textContent = n; }
   }
   for(const d of heads){
-    const nb = [d.sx + 20, d.sy - 9, d.sx - 17 + d.w, d.sy + 9];
-    const clash = !grpOf(d) && d.c !== activeCity && heads.some(h => h !== d && nb[0] < h.sx + 17 && nb[2] > h.sx - 17 && nb[1] < h.sy + 17 && nb[3] > h.sy - 17);
+    const nb = [d.sx + 16, d.sy - 8, d.sx - 13 + d.w, d.sy + 8];
+    const clash = !grpOf(d) && d.c !== activeCity && heads.some(h => h !== d && nb[0] < h.sx + 13 && nb[2] > h.sx - 13 && nb[1] < h.sy + 13 && nb[3] > h.sy - 13);
     d.el.classList.toggle("noname", clash);
   }
 }

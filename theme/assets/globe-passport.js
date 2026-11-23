@@ -85,7 +85,7 @@ function labelEl(d){
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
   if(d.kind === "city"){
     const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
-    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="17.6" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
     const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
   }
@@ -171,6 +171,7 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
       if(!fine) return;
     };
     wantDetail(world.pointOfView().altitude);
+    if(roomy) wantDetail(1.5);   // computers and tablets get the detailed Earth straight away
     // The land shape is built ahead of time (land-mesh.bin), so the browser only has to draw it.
     Promise.all([img(WOR.img + "land-paper.jpg" + IMGV), fetch(WOR.img + "land-mesh.bin" + IMGV).then(r => r.arrayBuffer()), fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json())]).then(([pi, bin, lines]) => {
       const lt = new Tex(pi); if(mat.map.colorSpace) lt.colorSpace = mat.map.colorSpace; lt.anisotropy = aniso; lt.needsUpdate = true;

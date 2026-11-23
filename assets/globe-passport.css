@@ -464,3 +464,13 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .wor-plane .v-boat{animation:wor-rock 1.6s ease-in-out infinite;transform-origin:50% 90%}
 .wor-plane .v-train,.wor-plane .v-bus{animation:wor-chug .35s steps(2) infinite}
 @media (prefers-reduced-motion:reduce){.wor-plane span{animation:none!important}}
+
+/* Bigger, clearer stamps */
+.glabel.city span{left:-17px;top:-17px}
+.glabel.city .pm{width:34px;height:34px;shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+.glabel.city .pm text{font:800 8.6px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1px}
+.glabel.city .pm .o{stroke-width:1.9}.glabel.city .pm .i{stroke-width:1}
+.glabel.city span{font-size:13px}
+.glabel.city .pm,.glabel.city .pm text{text-shadow:none!important}
+.glabel.city .pm text{font-weight:700;paint-order:normal;stroke:none!important}
+.glabel.city .pm{opacity:1!important}

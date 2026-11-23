@@ -78,10 +78,17 @@ const COUNTRY_LABELS = LABEL_PTS.map(p => {
   return {kind:"country", c, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
 }).sort((x, y) => y.a - x.a);
 const CITY_LABELS = CITIES.map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
+function hasStamp(city){ try { return !!MYPASS[city]; } catch(e){ return false; } }
 function labelEl(d){
   if(d.el) return d.el;
   const el = document.createElement("div"), s = document.createElement("span");
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
+  if(d.kind === "city"){
+    const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="17.6" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
+    const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
+    if(hasStamp(d.c.city)) el.classList.add("got");
+  }
   if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
   let down = null;
   s.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
@@ -99,7 +106,7 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .pathColor(d => d.color || "rgba(255,255,255,0.2)").pathStroke(d => d.stroke === undefined ? null : d.stroke).pathDashLength(d => d.dash || 1).pathDashGap(d => d.gap || 0).pathDashAnimateTime(0).pathTransitionDuration(0)
   .polygonsData([]).polygonCapColor(() => "rgba(255,214,150,0.13)").polygonSideColor(() => "rgba(0,0,0,0)")
   .polygonStrokeColor(() => "rgba(255,226,170,0.85)").polygonAltitude(0.005).polygonCapCurvatureResolution(1.5).polygonsTransitionDuration(0)
-  .pointsData(CITIES).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
+  .pointsData([]).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
   .arcsData([]).arcColor(() => ["rgba(255,199,110,0.2)", "rgba(255,199,110,0.95)"]).arcStroke(0.5).arcAltitudeAutoScale(0.42).arcAltitude(d => d.alt)
@@ -131,7 +138,7 @@ function closeOnEmpty(){ if(isOpen() && (activeCountry || activeCity)) closePane
 
 /* ---------- Natural Earth: soft city glows, drifting clouds, sunlit seas ---------- */
 function ringCol(){ return d => t => `rgba(255,${d === activeCity ? 236 : 199},${d === activeCity ? 200 : 110},${(1 - t) * 0.55})`; }
-world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
+world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
   .ringColor(ringCol())
   .ringMaxRadius(d => 1.1 + 0.35*Math.sqrt(d.items.length)).ringPropagationSpeed(0.7).ringRepeatPeriod(d => 2600 + (d.lat * 37 % 900));
 (function naturalEarth(){
@@ -524,10 +531,12 @@ function cityMRZ(c){
 const PASS_KEY = "rp-atlas-passport";
 let MYPASS = {};
 try { MYPASS = JSON.parse(localStorage.getItem(PASS_KEY) || "{}") || {}; } catch(e){ MYPASS = {}; }
+CITY_LABELS.forEach(l => { if(l.el) l.el.classList.toggle("got", !!MYPASS[l.c.city]); });
 function passCount(){ const n = Object.keys(MYPASS).length; const el = $("#my-pass-n"); if(el) el.textContent = n; return n; }
 function addPassStamp(city){
   if(MYPASS[city]) return;
   MYPASS[city] = new Date().toISOString().slice(0, 10);
+  CITY_LABELS.forEach(l => { if(l.el && l.c.city === city) l.el.classList.add("got"); });
   try { localStorage.setItem(PASS_KEY, JSON.stringify(MYPASS)); } catch(e){}
   passCount();
   const c = CITIES.find(x => x.city === city), t = $("#toast");

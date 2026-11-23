@@ -428,7 +428,16 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city.on .pm .o{fill:#f0b45e;stroke:#7a3a12}.glabel.city.on .pm text{fill:#3a1a06}
 .glabel.city.on span,.glabel.city span:hover{color:#7a2a12}
 
-/* The plane that flies the route */
-.wor-plane{position:absolute;left:-12px;top:-12px;width:24px;height:24px;pointer-events:none;z-index:4;will-change:transform;filter:drop-shadow(0 2px 2px rgba(20,14,8,.45))}
-.wor-plane svg{width:100%;height:100%;display:block}
-.wor-plane path{fill:#a3302b;stroke:#efe6d2;stroke-width:.9;stroke-linejoin:round}
+/* The vehicle that travels the route: plane, train or boat */
+.wor-plane{position:absolute;left:-17px;top:-12px;width:34px;height:24px;pointer-events:none;z-index:4;will-change:transform;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.wor-plane svg{position:absolute;inset:0;width:100%;height:100%;display:none;overflow:visible}
+.wor-plane[data-mode="plane"] .v-plane,.wor-plane[data-mode="train"] .v-train,.wor-plane[data-mode="boat"] .v-boat{display:block}
+.wor-plane .v-plane{left:5px;width:24px}
+.wor-plane path,.wor-plane rect,.wor-plane circle{fill:#a3302b;stroke:#efe6d2;stroke-width:.8;stroke-linejoin:round}
+.wor-plane .win,.wor-plane .win *{fill:#efe6d2;stroke:none}
+.wor-plane .wh circle{fill:#efe6d2;stroke:#a3302b;stroke-width:1}
+.wor-plane .v-boat{animation:wor-rock 1.6s ease-in-out infinite;transform-origin:50% 80%}
+.wor-plane .v-train{animation:wor-chug .35s steps(2) infinite}
+@keyframes wor-rock{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes wor-chug{0%{transform:translateY(0)}100%{transform:translateY(-.8px)}}
+@media (prefers-reduced-motion:reduce){.wor-plane svg{animation:none!important}}

@@ -456,3 +456,11 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .wor-plane .v-train .wh circle{fill:var(--veh-line);stroke:var(--veh);stroke-width:1.1}
 .wor-plane .v-train .pan{fill:none;stroke:var(--veh-line);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
 .wor-plane .v-train .rail{fill:none;stroke:var(--veh-line);stroke-width:1;stroke-linecap:round;opacity:.7}
+
+/* Emoji vehicles */
+.wor-plane span{position:absolute;left:0;top:0;width:50px;height:30px;display:none;align-items:flex-end;justify-content:center;font:26px/1 "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.wor-plane .v-plane{align-items:center;top:10px}
+.wor-plane[data-mode="plane"] .v-plane,.wor-plane[data-mode="train"] .v-train,.wor-plane[data-mode="bus"] .v-bus,.wor-plane[data-mode="boat"] .v-boat{display:flex}
+.wor-plane .v-boat{animation:wor-rock 1.6s ease-in-out infinite;transform-origin:50% 90%}
+.wor-plane .v-train,.wor-plane .v-bus{animation:wor-chug .35s steps(2) infinite}
+@media (prefers-reduced-motion:reduce){.wor-plane span{animation:none!important}}

@@ -943,11 +943,8 @@ intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); 
 /* ---------- A vehicle travels the route while its place is selected: a train between nearby places joined by land,
    a boat when the way is mostly sea, a plane for everything else ---------- */
 const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
-PLANE.innerHTML =
-  '<svg class="v-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>' +
-  '<svg class="v-train" viewBox="0 0 52 22" aria-hidden="true"><path class="pan" d="M29 6.2l2.6-3.2 2.6 3.2M27.8 3h7.6"/><g class="b"><rect x="1" y="6.2" width="22" height="9" rx="2"/><rect x="22.4" y="9" width="3.4" height="4" rx=".6"/><path d="M25.2 6.2h13.6c5.2 0 9.4 3 12 7.6l.2.4c.4.8-.2 1-1 1H25.2z"/></g><g class="win"><rect x="3.4" y="8.2" width="3.6" height="2.6" rx=".6"/><rect x="8.4" y="8.2" width="3.6" height="2.6" rx=".6"/><rect x="13.4" y="8.2" width="3.6" height="2.6" rx=".6"/><rect x="18.4" y="8.2" width="3" height="2.6" rx=".6"/><rect x="27.6" y="8.2" width="3.6" height="2.6" rx=".6"/><rect x="32.6" y="8.2" width="3.6" height="2.6" rx=".6"/><path d="M38 8.2h1.6c2.6 0 4.8 1 6.4 2.6H38z"/><rect x="1" y="12.2" width="49" height=".9" rx=".4"/></g><g class="wh"><circle cx="5" cy="16.9" r="1.6"/><circle cx="9" cy="16.9" r="1.6"/><circle cx="15" cy="16.9" r="1.6"/><circle cx="19" cy="16.9" r="1.6"/><circle cx="29" cy="16.9" r="1.6"/><circle cx="33" cy="16.9" r="1.6"/><circle cx="40" cy="16.9" r="1.6"/><circle cx="44" cy="16.9" r="1.6"/></g><path class="rail" d="M0 19.4h52"/></svg>' +
-  '<svg class="v-boat" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><path d="M1.5 12.5h31l-4.5 6.5H6z"/><rect x="8" y="7" width="14" height="5.5" rx=".8"/><rect x="15" y="2" width="4" height="5.5" rx=".6"/></g><g class="win"><circle cx="11" cy="9.7" r="1"/><circle cx="14.5" cy="9.7" r="1"/><circle cx="18" cy="9.7" r="1"/></g></svg>' +
-  '<svg class="v-bus" viewBox="0 0 44 24" aria-hidden="true"><g class="b"><path d="M3 5.5c0-1.4 1.1-2.5 2.5-2.5h29c2.4 0 4.3 1.4 5 3.6l1.6 5.4c.3.9.4 1.8.4 2.7V17c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2z"/><rect x="2.2" y="15.2" width="40.6" height="1.6" rx=".6"/></g><g class="win"><rect x="6" y="6" width="6" height="5" rx=".8"/><rect x="13.6" y="6" width="6" height="5" rx=".8"/><rect x="21.2" y="6" width="6" height="5" rx=".8"/><path d="M29 6h5.6c1.2 0 2.2.8 2.6 1.9l1 3.1H29z"/></g><g class="wh"><circle cx="11" cy="19" r="3"/><circle cx="33" cy="19" r="3"/></g><g class="hub"><circle cx="11" cy="19" r="1"/><circle cx="33" cy="19" r="1"/></g></svg>';
+// The vehicles are emoji, so every phone and computer draws them in its own style
+PLANE.innerHTML = '<span class="v-plane">\u2708\uFE0F</span><span class="v-train">\u{1F686}</span><span class="v-bus">\u{1F68C}</span><span class="v-boat">\u{1F6A2}</span>';
 let FLIGHT = null, ROUTE = null, LANDMASK = null, TRAIL = null, MASKWAIT = null;
 new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = WOR.img + "land-mask.png" + IMGV; }).then(im => {
   const cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
@@ -1131,7 +1128,7 @@ function flyPlane(a, b){
   const behind = disc > 0 && (-qb - Math.sqrt(disc)) / (2 * qa) < 0.995;
   const s1 = world.getScreenCoords(A[0], A[1], A[2]), s2 = world.getScreenCoords(B[0], B[1], B[2]);
   let ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI, flip = 1;
-  if(FLIGHT.mode === "plane") ang += 90;                      // seen from above, nose first
+  if(FLIGHT.mode === "plane") ang += 45;                      // the plane emoji points up and to the right
   else {                                                       // seen from the side: faces left or right, tilts at most 30 degrees
     if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }
     ang = Math.max(-30, Math.min(30, ang));
@@ -1139,6 +1136,7 @@ function flyPlane(a, b){
   const sc = FLIGHT.mode === "plane" ? 0.85 + Math.min(0.5, A[2] * 2.2) : 1;
   PLANE.hidden = behind;
   PLANE.style.opacity = String(Math.min(1, t * 8, (1 - t) * 8));
+  if(FLIGHT.mode !== "plane") flip = -flip;                    // the train, bus and ship emoji face left
   PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc * flip}, ${sc})`;
 })();
 function playMix(p){

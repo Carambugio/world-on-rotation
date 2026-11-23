@@ -1,7 +1,7 @@
 <?php
 /**
- * A personal stamp for selectors without a photo or logo: their initials in the middle and their name
- * around the rim, in one of the stamp inks, drawn as an SVG at /?wor_badge=<selector slug>.
+ * A personal monogram for selectors without a photo or logo: large initials and their name on a solid
+ * ink background, drawn as an SVG at /?wor_badge=<selector slug>. Deliberately unlike the round place stamps.
  *
  * @package World_On_Rotation
  */
@@ -27,21 +27,20 @@ function wor_badge_svg( $name, $slug ) {
 		$ini = mb_substr( $clean, 0, 2 );
 	}
 	$ini  = esc_html( mb_strtoupper( $ini ) );
-	$rim  = esc_html( mb_strtoupper( mb_substr( $clean, 0, 26 ) ) );
-	$size = mb_strlen( $ini ) > 1 ? 58 : 66;
+	$rim  = esc_html( mb_strtoupper( mb_substr( $clean, 0, 18 ) ) );
+	$size  = mb_strlen( $ini ) > 1 ? 76 : 88;
+	$lines = '';
+	for ( $k = -10; $k <= 20; $k++ ) {   // fine diagonal engraving across the background
+		$x      = $k * 14;
+		$lines .= '<path d="M' . $x . ' 200 Q' . ( $x + 60 ) . ' 110 ' . ( $x + 100 ) . ' 100 T' . ( $x + 200 ) . ' 0"/>';
+	}
 	return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400">'
-		. '<rect width="200" height="200" fill="#efe6d2"/>'
-		. '<defs><path id="t" d="M34 100a66 66 0 0 1 132 0"/><path id="b" d="M27 100a73 73 0 0 0 146 0"/></defs>'
-		. '<g transform="rotate(' . $rot . ' 100 100)" fill="none" stroke="' . $ink . '">'
-		. '<circle cx="100" cy="100" r="88" stroke-width="5"/>'
-		. '<circle cx="100" cy="100" r="80" stroke-width="1.5"/>'
-		. '<circle cx="100" cy="100" r="52" stroke-width="1.5" stroke-dasharray="3 3"/>'
-		. '<g fill="' . $ink . '" stroke="none" font-family="Courier New, Courier, monospace" font-weight="700">'
-		. '<text font-size="14" letter-spacing="2.6" text-anchor="middle"><textPath href="#t" startOffset="50%">' . $rim . '</textPath></text>'
-		. '<text font-size="10.5" letter-spacing="3" text-anchor="middle"><textPath href="#b" startOffset="50%">WORLD ON ROTATION</textPath></text>'
-		. '<text x="100" y="100" dy="0.35em" font-size="' . $size . '" text-anchor="middle" font-family="Georgia, Times New Roman, serif">' . $ini . '</text>'
-		. '<text x="38" y="106" font-size="14" text-anchor="middle">★</text><text x="162" y="106" font-size="14" text-anchor="middle">★</text>'
-		. '</g></g></svg>';
+		. '<rect width="200" height="200" fill="' . $ink . '"/>'
+		. '<g fill="none" stroke="#efe6d2" stroke-opacity=".09" stroke-width="1">' . $lines . '</g>'
+		. '<text x="100" y="96" dy="0.35em" font-size="' . $size . '" text-anchor="middle" fill="#f4ecdc" font-family="Georgia, Times New Roman, serif" font-weight="700" letter-spacing="-2">' . $ini . '</text>'
+		. '<rect x="62" y="138" width="76" height="1.6" fill="#f4ecdc" fill-opacity=".7"/>'
+		. '<text x="100" y="158" font-size="11" text-anchor="middle" fill="#f4ecdc" fill-opacity=".9" font-family="Courier New, Courier, monospace" font-weight="700" letter-spacing="2">' . $rim . '</text>'
+		. '</svg>';
 }
 
 add_action(

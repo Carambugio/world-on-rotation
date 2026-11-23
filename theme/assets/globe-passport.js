@@ -944,7 +944,7 @@ intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); 
    a boat when the way is mostly sea, a plane for everything else ---------- */
 const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
 // The vehicles are emoji, so every phone and computer draws them in its own style
-PLANE.innerHTML = '<span class="v-plane">\u2708\uFE0F</span><span class="v-train">\u{1F686}</span><span class="v-bus">\u{1F68C}</span><span class="v-boat">\u{1F6A2}</span>';
+PLANE.innerHTML = '<span class="v-plane">\u2708\uFE0F</span><span class="v-train">\u{1F684}</span><span class="v-bus">\u{1F68C}</span><span class="v-boat">\u{1F6A2}</span>';
 let FLIGHT = null, ROUTE = null, LANDMASK = null, TRAIL = null, MASKWAIT = null;
 new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = WOR.img + "land-mask.png" + IMGV; }).then(im => {
   const cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;

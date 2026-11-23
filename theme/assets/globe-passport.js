@@ -162,7 +162,7 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     let hd = false, fine = null, fineOn = false;
     window.wantDetail = alt => {
       if(alt < 1.6 && !hd){
-        hd = true;
+        hd = true; if(window.landHD) landHD();
         if(roomy) img(WOR.img + "earth-passport-hd.jpg" + IMGV).then(i => {
           const t = new Tex(i), old = mat.map; if(old.colorSpace) t.colorSpace = old.colorSpace;
           t.anisotropy = aniso; t.needsUpdate = true; mat.map = t; mat.needsUpdate = true; old.dispose();
@@ -174,8 +174,13 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     Promise.all([img(WOR.img + "land-paper.jpg" + IMGV), fetch(WOR.img + "land-50m.json" + IMGV).then(r => r.json()), fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json())]).then(([pi, shapes, lines]) => {
       const lt = new Tex(pi); if(mat.map.colorSpace) lt.colorSpace = mat.map.colorSpace; lt.anisotropy = aniso; lt.needsUpdate = true;
       const landMat = new mat.constructor({ color: 0xffffff, shininess: 0 }); if(landMat.specular) landMat.specular.set("#000000");
+      const landUni = { value: lt };
+      window.landHD = roomy ? () => { window.landHD = null; img(WOR.img + "land-paper-hd.jpg" + IMGV).then(i => {
+        const t = new Tex(i); if(lt.colorSpace) t.colorSpace = lt.colorSpace; t.anisotropy = aniso; t.needsUpdate = true; landUni.value = t; lt.dispose();
+      }).catch(() => {}); } : null;
+      if(hd && window.landHD) landHD();
       landMat.onBeforeCompile = sh => {
-        sh.uniforms.landTex = { value: lt };
+        sh.uniforms.landTex = landUni;
         sh.vertexShader = "varying vec3 vGeo;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vGeo = position;");
         sh.fragmentShader = "uniform sampler2D landTex;\nvarying vec3 vGeo;\n" + sh.fragmentShader.replace("#include <map_fragment>", `
   vec3 pn = normalize(vGeo);
@@ -219,7 +224,13 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
         merged(LAND50, geo => {
           const land = new Mesh(geo, landMat); land.scale.setScalar(1.003); world.scene().add(land);
           const lp = [], toXYZ = (lng, lat, r) => { const ph = (90 - lat) * Math.PI / 180, th = (90 - lng) * Math.PI / 180; return [r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)]; };
-          const segs = (ls, r) => { const a = []; ls.forEach(l => { for(let k = 0; k < l.length - 1; k++){ if(Math.abs(l[k + 1][0] - l[k][0]) > 180) continue; a.push(...toXYZ(l[k][0], l[k][1], r), ...toXYZ(l[k + 1][0], l[k + 1][1], r)); } }); const g = new BG(); g.setAttribute("position", new Attr(new Float32Array(a), 3)); return g; };
+          // Long straight borders get extra points every half degree, so the line follows the curve of the globe instead of cutting under the land.
+          const segs = (ls, r) => { const a = []; ls.forEach(l => { for(let k = 0; k < l.length - 1; k++){
+            const [x0, y0] = l[k], [x1, y1] = l[k + 1]; if(Math.abs(x1 - x0) > 180) continue;
+            const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 0.5));
+            let prev = toXYZ(x0, y0, r);
+            for(let j = 1; j <= n; j++){ const t = j / n, cur = toXYZ(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, r); a.push(...prev, ...cur); prev = cur; }
+          } }); const g = new BG(); g.setAttribute("position", new Attr(new Float32Array(a), 3)); return g; };
           world.scene().add(new Seg(segs(lines, 100.34), new LineMat({ color: 0x28303f, transparent: true, opacity: 0.85 })));
           const overlayMat = (hex, op) => { const m = new mat.constructor({ color: hex, transparent: true, opacity: op, shininess: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); if(m.specular) m.specular.set("#000000"); return m; };
           merged(LAND50.filter(f => MIXRAW.has(f.n)), g => { const m = new Mesh(g, overlayMat(0xf0aa50, 0.24)); m.scale.setScalar(1.003); world.scene().add(m); });

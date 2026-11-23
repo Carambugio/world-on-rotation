@@ -415,3 +415,8 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 
 /* Selector photos */
 .dp-photo,.mini-photo{overflow:hidden}.dp-photo img,.mini-photo img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* The plane that flies the route */
+.wor-plane{position:absolute;left:-12px;top:-12px;width:24px;height:24px;pointer-events:none;z-index:4;will-change:transform;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+.wor-plane svg{width:100%;height:100%;display:block}
+.wor-plane path{fill:#ffc76e;stroke:#1b1206;stroke-width:.8;stroke-linejoin:round}

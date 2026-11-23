@@ -447,3 +447,10 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city.got .pm .o{stroke-width:2.4;fill:color-mix(in srgb,var(--ink,#24324a) 20%,#efe6d2)}.glabel.city.got .pm .i{stroke-dasharray:none}
 .glabel.city.on .pm .o{fill:#f0b45e;stroke:#7a3a12}.glabel.city.on .pm text{fill:#3a1a06}
 .glabel.city.on .pm{filter:drop-shadow(0 0 6px rgba(255,199,110,.9))}
+
+/* Modern passenger train */
+.wor-plane .v-train .b *{fill:var(--veh);stroke:var(--veh-line);stroke-width:.8;stroke-linejoin:round}
+.wor-plane .v-train .win *{fill:var(--veh-line);stroke:none}
+.wor-plane .v-train .wh circle{fill:var(--veh-line);stroke:var(--veh);stroke-width:1.1}
+.wor-plane .v-train .pan{fill:none;stroke:var(--veh-line);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.wor-plane .v-train .rail{fill:none;stroke:var(--veh-line);stroke-width:1;stroke-linecap:round;opacity:.7}

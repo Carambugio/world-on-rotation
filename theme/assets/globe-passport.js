@@ -100,7 +100,6 @@ function labelEl(d){
 const PIN = "#ffc76e", PIN_ON = "#fff4dc";
 /* Land is drawn as shapes, so coasts and borders stay sharp at any zoom; the paper and relief come from a texture looked up by position. */
 let HLRAW = null, LAND50 = null;
-const MIXRAW = new Set(CITIES.map(c => c.ci && c.ci.raw).filter(Boolean));
 const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .globeImageUrl(WOR.img + "earth-passport.jpg" + IMGV).backgroundColor("rgba(0,0,0,0)")
   .showAtmosphere(true).atmosphereColor("#e8d6ad").atmosphereAltitude(0.11)
@@ -233,9 +232,16 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           } }); const g = new BG(); g.setAttribute("position", new Attr(new Float32Array(a), 3)); return g; };
           world.scene().add(new Seg(segs(lines, 100.34), new LineMat({ color: 0x28303f, transparent: true, opacity: 0.85 })));
           const overlayMat = (hex, op) => { const m = new mat.constructor({ color: hex, transparent: true, opacity: op, shininess: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); if(m.specular) m.specular.set("#000000"); return m; };
-          merged(LAND50.filter(f => MIXRAW.has(f.n)), g => { const m = new Mesh(g, overlayMat(0xf0aa50, 0.24)); m.scale.setScalar(1.003); world.scene().add(m); });
+          // Countries you have stamped in your passport get a light wash
+          const visMat = overlayMat(0xb8915a, 0.2); let visObj = null, visKey = "";
+          window.setVisited = () => {
+            const set = new Set(Object.keys(MYPASS).map(city => { const c = CITIES.find(x => x.city === city); return c && c.ci ? c.ci.raw : null; }).filter(Boolean));
+            const key = [...set].sort().join("|"); if(key === visKey) return; visKey = key;
+            merged(LAND50.filter(f => set.has(f.n)), g => { if(visKey !== key){ g.dispose(); return; } if(visObj){ world.scene().remove(visObj); visObj.geometry.dispose(); } visObj = new Mesh(g, visMat); visObj.scale.setScalar(1.003); world.scene().add(visObj); });
+          };
+          setVisited();
           // The open country: a stronger wash and a red outline
-          const hlMat = overlayMat(0xeb8c28, 0.36), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
+          const hlMat = overlayMat(0xe08a30, 0.42), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {
             hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
             if(!raw) return;
@@ -590,6 +596,7 @@ function addPassStamp(city){
   if(MYPASS[city]) return;
   MYPASS[city] = new Date().toISOString().slice(0, 10);
   CITY_LABELS.forEach(l => { if(l.el && l.c.city === city) l.el.classList.add("got"); });
+  if(window.setVisited) setTimeout(setVisited, 0);
   try { localStorage.setItem(PASS_KEY, JSON.stringify(MYPASS)); } catch(e){}
   passCount();
   const c = CITIES.find(x => x.city === city), t = $("#toast");

@@ -88,12 +88,17 @@ function labelEl(d){
     s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
     const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
+    s.insertAdjacentHTML("beforeend", '<b class="cnt"></b>');
   }
   if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
   let down = null;
   s.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
   s.addEventListener("click", e => { e.stopPropagation(); labelClickAt = performance.now();
     if(down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 8) return; // a drag that started on a label spins the globe
+    if(d.kind === "city" && d.members && d.members.length > 1){   // a group of places: zoom in until they separate
+      const ms = d.members, lat = d3.mean(ms, m => m.c.lat), lng = d3.mean(ms, m => m.c.lon);
+      world.pointOfView({ lat, lng, altitude: Math.max(0.12, world.pointOfView().altitude * 0.45) }, 900); return;
+    }
     d.kind === "city" ? openCity(d.c.city) : openCountry(d.c); });
   for(const t of ["pointerup", "mouseup"]) s.addEventListener(t, e => { labelClickAt = performance.now(); });
   el.appendChild(s); d.el = el; return el;
@@ -268,14 +273,20 @@ function overlaps(b, list){ for(const o of list){ if(b[0] < o[2] && b[2] > o[0] 
 function tidyLabels(){
   const data = world.htmlElementsData(); if(!data || !data.length) return;
   const pov = world.pointOfView(), centre = [pov.lng, pov.lat], placed = [], horizon = Math.acos(1/(1 + pov.altitude)) - 0.1;
-  const order = [...data].sort((x, y) => (x.kind === "city" ? 1e9 + x.c.items.length : x.a) < (y.kind === "city" ? 1e9 + y.c.items.length : y.a) ? 1 : -1);
+  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.a;
+  const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [];
   for(const d of order){
     const s = d.el && d.el.firstChild; if(!s) continue;
     let show = d3.geoDistance([d.lng, d.lat], centre) < horizon;
     if(show){
       const {x, y} = world.getScreenCoords(d.lat, d.lng, 0.006);
       if(!d.w){ d.w = s.offsetWidth; d.h = s.offsetHeight; }
-      if(d.kind === "city"){ placed.push([x - 6, y - 10, x + 9 + d.w, y + 8]); }
+      if(d.kind === "city"){
+        /* Places that would overlap merge into one stamp with a count; the place open or playing always stands alone */
+        const host = d.c === activeCity ? null : heads.find(h => h.c !== activeCity && Math.hypot(h.sx - x, h.sy - y) < 36);
+        if(host){ host.members.push(d); d.members = null; show = false; }
+        else { d.sx = x; d.sy = y; d.members = [d]; heads.push(d); placed.push([x - 17, y - 17, x + 17 + d.w, y + 17]); }
+      }
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
@@ -287,7 +298,18 @@ function tidyLabels(){
     }
     s.style.visibility = show ? "visible" : "hidden";
   }
+  for(const d of data) if(d.kind === "city" && d.el){
+    const n = d.members ? d.members.length : 0, grp = n > 1;
+    d.el.classList.toggle("grp", grp);
+    if(grp){ const b = d.el.querySelector(".cnt"); if(b) b.textContent = n; }
+  }
+  for(const d of heads){
+    const nb = [d.sx + 20, d.sy - 9, d.sx - 17 + d.w, d.sy + 9];
+    const clash = !grpOf(d) && d.c !== activeCity && heads.some(h => h !== d && nb[0] < h.sx + 17 && nb[2] > h.sx - 17 && nb[1] < h.sy + 17 && nb[3] > h.sy - 17);
+    d.el.classList.toggle("noname", clash);
+  }
 }
+const grpOf = d => d.members && d.members.length > 1;
 /* ---------- Main loop ---------- */
 let last = performance.now(), uiAcc = 0, tidyAcc = 0;
 d3.timer(() => {

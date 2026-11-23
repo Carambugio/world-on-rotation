@@ -479,3 +479,12 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city .pm .halo{fill:#f6efe2;stroke:rgba(20,28,44,.35);stroke-width:.5}
 .glabel.city .pm .o{fill:#f6efe2}
 .glabel.city .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))}
+
+/* A group of nearby places: one stamp with the number of places, stacked like a pile of stamps */
+.glabel.city .cnt{display:none}
+.glabel.city.grp .cnt{display:flex;position:absolute;left:0;top:0;width:34px;height:34px;align-items:center;justify-content:center;font:800 13px/1 "IBM Plex Mono",ui-monospace,monospace;color:#24324a;text-shadow:none;pointer-events:none}
+.glabel.city.grp span{--ink:#24324a!important;color:transparent!important;text-shadow:none!important;cursor:zoom-in}
+.glabel.city.grp .pm text{visibility:hidden}
+.glabel.city.grp .pm{filter:drop-shadow(3px -3px 0 #ece3d2) drop-shadow(0 0 .6px #24324a) drop-shadow(3px -3px 0 #e3d9c6) drop-shadow(0 1px 3px rgba(0,0,0,.55))}
+
+.glabel.city.noname span{color:transparent!important;text-shadow:none!important}

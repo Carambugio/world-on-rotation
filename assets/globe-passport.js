@@ -1045,8 +1045,8 @@ function planRoute(a, b){
   if(!res){
     const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
     for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
-    // Ships only for shorter sea crossings between two ports: no passenger ships cross oceans
-    res = { mode: sea / (n - 1) > 0.6 && straight < 2500 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
+    // Ships for routes that are mostly sea between two coastal cities, oceans included (Lagos to Salvador)
+    res = { mode: sea / (n - 1) > 0.6 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
   }
   PLANS.set(key, res); return res;
 }

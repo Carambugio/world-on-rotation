@@ -22,6 +22,7 @@ function wor_fields( $post_type ) {
 			'spotify'   => array( 'Spotify link', 'url', 'For playlists: paste the Spotify share link. Used when there is no Mixcloud link.' ),
 			'audio'     => array( 'Audio file sent by the selector', 'url', 'Download it, upload it to the World on Rotation Mixcloud with the tracklist below, then paste the new Mixcloud link above. Transfer links expire, so download it soon.' ),
 			'tracklist' => array( 'Tracklist', 'paras', 'One track per line. Paste it into Mixcloud when you upload.' ),
+			'qa'        => array( 'Q&A', 'paras', 'Shown on the mix page. Each question on its own line with the answer on the next, and an empty line between pairs.' ),
 			'minutes'   => array( 'Duration (minutes)', 'number', '' ),
 			'tracks'    => array( 'Number of tracks', 'number', '' ),
 			'genres'    => array( 'Genres', 'text', 'Separate with commas, for example: Highlife, Juju' ),

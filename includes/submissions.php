@@ -203,6 +203,17 @@ function wor_match_place( $text ) {
 	return $p && 'publish' === $p->post_status ? (int) $p->ID : 0;
 }
 
+/** The optional questions on the submission form. {place} becomes the place the selector names. */
+function wor_qa_questions() {
+	return array(
+		1 => 'Who are you, and what ties you to {place}?',
+		2 => 'Pick three tracks from the mix and tell us why they matter.',
+		3 => 'Is there a night, a record or a person that sums up your connection to this music?',
+		4 => 'What do people get wrong about music from {place}?',
+		5 => 'Who should we be listening to from {place} right now?',
+	);
+}
+
 function wor_field( $name, $label, $attrs = '', $help = '', $type = 'text', $value = '' ) {
 	$id = 'wor-f-' . $name;
 	$in = 'textarea' === $type
@@ -254,11 +265,16 @@ add_shortcode( 'wor_submit', function () {
 	}
 	$out .= '<fieldset><legend>Your mix</legend>';
 	$out .= wor_field( 'title', 'Title', 'required maxlength="120"' );
-	$out .= wor_field( 'audio', 'Download link for the audio file', 'required maxlength="500" placeholder="https://wetransfer.com/…"', 'WeTransfer, Dropbox, Google Drive or similar. WAV, or MP3 at 320 kbps, at least 15 minutes long. We upload it to the World on Rotation Mixcloud, credited to you. A playlist works too: put the tracks back to back in one file.', 'url' );
+	$out .= wor_field( 'audio', 'Download link for the audio file', 'required maxlength="500" placeholder="https://wetransfer.com/…"', 'WeTransfer, Dropbox, Google Drive or similar. WAV or MP3: 320 kbps is best, 256 is fine, 128 only if you have nothing better. At least 12 tracks or 30 minutes. Mixcloud allows no more than four tracks by one artist and three from one release. We upload it to the World on Rotation Mixcloud, credited to you. A playlist works too: put the tracks back to back in one file.', 'url' );
 	$out .= wor_field( 'tracklist', 'Tracklist', 'required maxlength="4000" rows="8" placeholder="Artist – Title&#10;Artist – Title"', 'One track per line, in order. Mixcloud uses it to pay the artists.', 'textarea' );
 	$out .= wor_field( 'place', 'The place it belongs to', 'required maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali.' );
 	$out .= wor_field( 'genres', 'Styles', 'maxlength="120"', 'Optional, separated by commas.' );
 	$out .= wor_field( 'desc', 'Description', 'required maxlength="600" rows="4"', 'A few lines on what it is and why. Up to 600 characters.', 'textarea' );
+	$out .= '</fieldset>';
+	$out .= '<fieldset><legend>Quick Q&amp;A (optional)</legend><p class="qa-intro">Answer any of these, or none. A few lines each is plenty. Your answers appear on the mix page.</p>';
+	foreach ( wor_qa_questions() as $i => $q ) {
+		$out .= wor_field( 'qa' . $i, str_replace( '{place}', 'this place', $q ), 'maxlength="700" rows="3"', '', 'textarea' );
+	}
 	$out .= '</fieldset>';
 	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on its Mixcloud and on this site, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
 	$out .= '<p><button class="btn primary" type="submit">Send it</button></p></form>';
@@ -286,6 +302,7 @@ function wor_form_css() {
 .wform .hp{position:absolute!important;left:-9999px!important;height:1px;overflow:hidden}
 .wform .werr{border:1px solid #e0705e;background:rgba(224,112,94,.12);border-radius:10px;padding:10px 14px;margin:0}
 .wform .as{margin:0}
+.wform .qa-intro{margin:0;font-size:13.5px;color:var(--muted,rgba(243,238,228,.66))}
 .wform.done h2{margin-bottom:6px}
 </style>';
 }
@@ -406,6 +423,16 @@ function wor_handle_submit() {
 	}
 	update_post_meta( $mix_id, '_wor_audio', $audio );
 	update_post_meta( $mix_id, '_wor_tracklist', $tracks );
+	$qa = array();
+	foreach ( wor_qa_questions() as $i => $q ) {
+		$a = trim( preg_replace( '/\s+/', ' ', $p( 'qa' . $i, 700 ) ) );
+		if ( '' !== $a ) {
+			$qa[] = str_replace( '{place}', trim( strtok( $place, ',' ) ), $q ) . "\n" . $a;
+		}
+	}
+	if ( $qa ) {
+		update_post_meta( $mix_id, '_wor_qa', implode( "\n\n", $qa ) );
+	}
 	update_post_meta( $mix_id, '_wor_selector', (string) $selector_id );
 	update_post_meta( $mix_id, '_wor_genres', $genres );
 	update_post_meta( $mix_id, '_wor_added', current_time( 'Y-m-d' ) );

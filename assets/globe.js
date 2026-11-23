@@ -218,7 +218,7 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
   const it = document.getElementById("intro"); it.style.backgroundImage = v.style.backgroundImage; it.style.backgroundSize = v.style.backgroundSize;
 })();
 const ctl = world.controls();
-ctl.autoRotate = false; ctl.autoRotateSpeed = 0.35; ctl.enableDamping = true; ctl.dampingFactor = 0.08;
+ctl.autoRotate = false; ctl.autoRotateSpeed = 0.35; // positive: the Earth turns eastward, as it does ctl.enableDamping = true; ctl.dampingFactor = 0.08;
 ctl.addEventListener("start", () => { lastInteract = performance.now(); hideHintSoon(); });
 world.pointOfView({lat:22, lng:10, altitude:1.85}, 0);
 let labelKey = "", cityLabelSize = 0.55;
@@ -811,7 +811,8 @@ function introTick(dt){
   const f = reduce ? 1 : Math.min(1, dt*4);
   xf += (xfTarget - xf)*Math.min(1, reduce ? 1 : dt*6);
   for(const d of DECKS){
-    d.rot += dt * (entering === d ? TAU/5 : d.playing ? TAU/9 : d.speed) * (reduce ? 0 : 1);
+    // Both records turn the way the Earth does: Side A (north pole up) anticlockwise, Side B (south pole up) clockwise
+    d.rot += dt * (entering === d ? TAU/5 : d.playing ? TAU/9 : d.speed) * (reduce ? 0 : 1) * (d.side === "A" ? -1 : 1);
     d.arm += (d.armTarget - d.arm)*f; d.lift += ((entering === d || d.playing) ? 0 : 1) - d.lift > 0 ? Math.min(1, dt*5)*(((entering === d || d.playing) ? 0 : 1) - d.lift) : Math.min(1, dt*5)*(((entering === d || d.playing) ? 0 : 1) - d.lift);
   }
   drawIntro();

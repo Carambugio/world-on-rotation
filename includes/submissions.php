@@ -203,23 +203,22 @@ function wor_match_place( $text ) {
 	return $p && 'publish' === $p->post_status ? (int) $p->ID : 0;
 }
 
-/** The optional questions on the submission form. {place} becomes the place the mix belongs to, as the selector names it. */
+/** The optional questions on the submission form: the same wording for every selector. */
 function wor_qa_questions() {
 	return array(
-		1 => 'Who are you, what do you do, and what ties you to {place}?',
-		2 => 'What makes the music of {place} different from anywhere else, and what stands out in the scene right now?',
-		3 => 'Which tracks or artists in your mix should we hear first, and who else from {place} deserves more attention?',
+		1 => 'Who are you, what do you do, and what ties you to the place your mix comes from?',
+		2 => 'What makes its music different from anywhere else, and what stands out in the scene right now?',
+		3 => 'Which tracks or artists in your mix should we hear first, and who else from there deserves more attention?',
 		4 => 'Tell us about a moment, a night or a person that sums up your connection to this music.',
-		5 => 'What do people get wrong about the music of {place}?',
-		6 => 'How do traditional and contemporary music feed into each other in {place}?',
-		7 => 'How has the music of {place} changed, where is it heading, and what part do you play in it?',
+		5 => 'What do people get wrong about this music?',
+		6 => 'How do traditional and contemporary sounds feed into each other there?',
+		7 => 'How has this music changed, where is it heading, and what part do you play in it?',
 	);
 }
 
-/** Put the place into a question: the first part of what the selector typed ("Naples" from "Naples, Italy"). */
+/** Questions are shown exactly as written. */
 function wor_qa_fill( $q, $place ) {
-	$name = trim( (string) strtok( (string) $place, ',' ) );
-	return str_replace( '{place}', '' === $name ? 'the place' : $name, $q );
+	return $q;
 }
 
 function wor_field( $name, $label, $attrs = '', $help = '', $type = 'text', $value = '' ) {

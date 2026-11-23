@@ -102,7 +102,7 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .pointsData(CITIES).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
-  .arcsData([]).arcColor(() => ["rgba(255,199,110,0.2)", "rgba(255,199,110,0.95)"]).arcStroke(0.5).arcAltitudeAutoScale(0.42)
+  .arcsData([]).arcColor(() => ["rgba(255,199,110,0.2)", "rgba(255,199,110,0.95)"]).arcStroke(0.5).arcAltitudeAutoScale(0.42).arcAltitude(d => d.alt)
   .arcDashLength(0.012).arcDashGap(0.012).arcDashInitialGap(0).arcDashAnimateTime(0).arcsTransitionDuration(0)
   .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude(0.006).htmlTransitionDuration(0)
   .htmlElement(labelEl).htmlElementVisibilityModifier((el, vis) => { el.style.opacity = vis ? 1 : 0; el.style.pointerEvents = vis ? "" : "none"; const s = el.firstChild; if(s) s.style.pointerEvents = vis ? "auto" : "none"; })
@@ -847,45 +847,75 @@ function showRecord(){
 }
 intro.addEventListener("pointermove", e => { if(entering) return; const r = intro.getBoundingClientRect(), d = deckAt(e.clientX - r.left, e.clientY - r.top); xfTarget = d ? (d.side === "A" ? -0.7 : 0.7) : (current ? (current.lat >= 0 ? -1 : 1) : 0); intro.style.cursor = d ? "pointer" : "default"; });
 intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); enterGlobe(deckAt(e.clientX - r.left, e.clientY - r.top)); });
-/* ---------- A small plane flies the route when a mix starts, on the same curve as the route line ---------- */
+/* ---------- A vehicle travels the route while its place is selected: a train between nearby places joined by land,
+   a boat when the way is mostly sea, a plane for everything else ---------- */
 const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
-PLANE.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>';
-let FLIGHT = null, ROUTE = null;
-// The plane keeps flying the route, again and again, for as long as its destination is the selected place
+PLANE.innerHTML =
+  '<svg class="v-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>' +
+  '<svg class="v-train" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><rect x="2" y="3" width="9" height="12" rx="1.2"/><rect x="10" y="7" width="16" height="8" rx="3.2"/><rect x="20.5" y="2.5" width="3.6" height="5.5" rx=".8"/><path d="M26 10.5l5.5 4.5h-5.5z"/></g><rect class="win" x="4" y="5" width="5" height="4" rx=".6"/><g class="wh"><circle cx="6.5" cy="17.5" r="2.7"/><circle cx="14" cy="17.5" r="2.7"/><circle cx="21.5" cy="17.5" r="2.7"/></g></svg>' +
+  '<svg class="v-boat" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><path d="M1.5 12.5h31l-4.5 6.5H6z"/><rect x="8" y="7" width="14" height="5.5" rx=".8"/><rect x="15" y="2" width="4" height="5.5" rx=".6"/></g><g class="win"><circle cx="11" cy="9.7" r="1"/><circle cx="14.5" cy="9.7" r="1"/><circle cx="18" cy="9.7" r="1"/></g></svg>';
+let FLIGHT = null, ROUTE = null, LANDMASK = null;
+new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = WOR.img + "land-mask.png" + IMGV; }).then(im => {
+  const cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
+  const g = cv.getContext("2d"); g.drawImage(im, 0, 0);
+  try { const d = g.getImageData(0, 0, im.width, im.height).data, a = new Uint8Array(im.width * im.height); for(let k = 0; k < a.length; k++) a[k] = d[k * 4] > 127 ? 1 : 0; LANDMASK = { w: im.width, h: im.height, a }; } catch(e){}
+}).catch(() => {});
+function isLand(lon, lat){ const M = LANDMASK; if(!M) return true; const x = Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), y = Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0)); return M.a[y * M.w + x] === 1; }
+function routeMode(a, b){
+  const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]), ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
+  if(!LANDMASK) return "plane";
+  const n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
+  for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
+  const seaFrac = sea / (n - 1);
+  if(seaFrac < 0.06 && D < 0.5) return "train";   // joined by land and no more than about 3,200 km apart
+  if(seaFrac > 0.6) return "boat";
+  return "plane";
+}
+// The vehicle keeps travelling the route, again and again, for as long as its destination is the selected place
 function flyPlane(a, b){
   ROUTE = { from: a, to: b };
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
   if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
-  const alt = D / 2 * 0.42, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
+  const mode = ROUTE.mode = routeMode(a, b);
+  world.arcsData([{ startLat: a.lat, startLng: a.lon, endLat: b.lat, endLng: b.lon, alt: mode === "plane" ? null : 0 }]);
+  PLANE.dataset.mode = mode;
+  const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
   const v = (lng, lat, h) => { const r = 100 * (1 + h), la = lat * Math.PI / 180, ln = lng * Math.PI / 180; return [r * Math.cos(la) * Math.sin(ln), r * Math.sin(la), r * Math.cos(la) * Math.cos(ln)]; };
-  const m1 = ip(0.25), m2 = ip(0.75);
-  FLIGHT = { P: [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)], t0: performance.now(), dur: Math.min(12000, 5200 + D * 3200), to: b };
+  let at;
+  if(mode === "plane"){
+    const alt = D / 2 * 0.42, m1 = ip(0.25), m2 = ip(0.75), P = [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)];
+    at = k => { const u = 1 - k; return [0, 1, 2].map(i => u * u * u * P[0][i] + 3 * u * u * k * P[1][i] + 3 * u * k * k * P[2][i] + k * k * k * P[3][i]); };
+  } else at = k => { const q = ip(k); return v(q[0], q[1], 0.007); };
+  const slow = mode === "plane" ? 1 : 1.35;
+  FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode };
 }
 (function planeTick(){
   requestAnimationFrame(planeTick);
   if(!FLIGHT){ if(!PLANE.hidden) PLANE.hidden = true; return; }
   const stay = activeCity && activeCity === FLIGHT.to;
-  if(stay) FLIGHT.seen = true; else if(FLIGHT.seen){ FLIGHT = null; PLANE.hidden = true; return; } // the place was closed: the plane goes
+  if(stay) FLIGHT.seen = true; else if(FLIGHT.seen){ FLIGHT = null; PLANE.hidden = true; return; } // the place was closed: the vehicle goes
   let t = (performance.now() - FLIGHT.t0) / FLIGHT.dur;
   if(t >= 1){ if(stay){ FLIGHT.t0 = performance.now() + 700; } else { FLIGHT = null; } return; }
   if(t < 0){ PLANE.hidden = true; if(!stay) FLIGHT = null; return; }
   const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  const bez = (P, k) => { const u = 1 - k; return [0, 1, 2].map(i => u * u * u * P[0][i] + 3 * u * u * k * P[1][i] + 3 * u * k * k * P[2][i] + k * k * k * P[3][i]); };
   const lla = q => { const r = Math.hypot(q[0], q[1], q[2]); return [Math.asin(q[1] / r) * 180 / Math.PI, Math.atan2(q[0], q[2]) * 180 / Math.PI, r / 100 - 1]; };
-  const p = bez(FLIGHT.P, e), q = bez(FLIGHT.P, Math.min(1, e + 0.01)), A = lla(p), B = lla(q);
+  const p = FLIGHT.at(e), q = FLIGHT.at(Math.min(1, e + 0.01)), A = lla(p), B = lla(q);
   // hidden while it is behind the globe
   const c = world.camera().position, d = [p[0] - c.x, p[1] - c.y, p[2] - c.z];
   const qa = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], qb = 2 * (c.x * d[0] + c.y * d[1] + c.z * d[2]), qc = c.x * c.x + c.y * c.y + c.z * c.z - 100 * 100, disc = qb * qb - 4 * qa * qc;
   const behind = disc > 0 && (-qb - Math.sqrt(disc)) / (2 * qa) < 0.995;
   const s1 = world.getScreenCoords(A[0], A[1], A[2]), s2 = world.getScreenCoords(B[0], B[1], B[2]);
-  const ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI + 90, sc = 0.85 + Math.min(0.5, A[2] * 2.2);
+  let ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI, flip = 1;
+  if(FLIGHT.mode === "plane") ang += 90;                      // seen from above, nose first
+  else if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }   // seen from the side, never upside down
+  const sc = FLIGHT.mode === "plane" ? 0.85 + Math.min(0.5, A[2] * 2.2) : 1;
   PLANE.hidden = behind;
   PLANE.style.opacity = String(Math.min(1, t * 8, (1 - t) * 8));
-  PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc})`;
+  PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc * flip}, ${sc})`;
 })();
 function playMix(p){
   const from = current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null), to = CITIES.find(x => x.city === p.city);
-  if(from && to && from !== to){ world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon}]); if(!introOn) flyPlane(from, to); }
+  if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const m = routeMode(from, to); ROUTE = { from, to, mode: m }; world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon, alt: m === "plane" ? null : 0}]); } }
   current = p;
   const bar = $("#bar");
   $("#bar-art").innerHTML = stamp(p, 44);

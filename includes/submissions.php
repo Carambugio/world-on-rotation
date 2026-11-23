@@ -268,7 +268,7 @@ add_shortcode( 'wor_submit', function () {
 		$out .= wor_field( 'email', 'Email', 'required maxlength="120" autocomplete="email"', 'So we can tell you when your mix is live. Never shown on the site.', 'email' );
 		$out .= wor_field( 'base', 'Based in', 'required maxlength="80"', 'City and country, for example Lagos, Nigeria.' );
 		$out .= wor_field( 'role', 'What you do', 'maxlength="80"', 'For example: DJ and record collector, radio host, label owner.' );
-		$out .= wor_field( 'bio', 'Short bio', 'required maxlength="800" rows="5"', 'Up to 800 characters.', 'textarea' );
+		$out .= wor_field( 'bio', 'Short bio', 'required maxlength="1000" rows="6"', 'Up to 1,000 characters.', 'textarea' );
 		$out .= wor_field( 'links', 'Your links', 'maxlength="1200" rows="4" placeholder="https://www.mixcloud.com/yourname/&#10;https://www.instagram.com/yourname/"', 'One per line: Mixcloud, Instagram, website, Bandcamp and so on.', 'textarea' );
 		$out .= '<p class="wf"><label for="wor-f-photo">Photo or logo</label><input id="wor-f-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 2 MB. Square works best.</small></p>';
 		$out .= '</fieldset>';
@@ -279,7 +279,7 @@ add_shortcode( 'wor_submit', function () {
 	$out .= wor_field( 'tracklist', 'Tracklist', 'required maxlength="4000" rows="8" placeholder="Artist – Title&#10;Artist – Title"', 'One track per line, in order. Mixcloud uses it to pay the artists.', 'textarea' );
 	$out .= wor_field( 'place', 'The place it belongs to', 'required maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali.' );
 	$out .= wor_field( 'genres', 'Styles', 'maxlength="120"', 'Optional, separated by commas.' );
-	$out .= wor_field( 'desc', 'Description', 'required maxlength="600" rows="4"', 'A few lines on what it is and why. Up to 600 characters.', 'textarea' );
+	$out .= wor_field( 'desc', 'Description', 'required maxlength="750" rows="5"', 'A few lines on what it is and why. Up to 750 characters.', 'textarea' );
 	$out .= '</fieldset>';
 	$out .= '<fieldset><legend>Quick Q&amp;A (optional)</legend><p class="qa-intro">Answer any of these, or none. A few lines each is plenty. Your answers appear on the mix page.</p>';
 	foreach ( wor_qa_questions() as $i => $q ) {
@@ -351,7 +351,7 @@ function wor_handle_submit() {
 	$audio  = esc_url_raw( $p( 'audio', 500 ) );
 	$tracks = $p( 'tracklist', 4000 );
 	$place  = $p( 'place', 80 );
-	$desc   = $p( 'desc', 600 );
+	$desc   = $p( 'desc', 750 );
 	$genres = $p( 'genres', 120 );
 	if ( '' === $title || '' === $place || '' === $desc ) {
 		wor_submit_back( $token, 'Please fill in the title, the place and the description of your mix.' );
@@ -373,7 +373,7 @@ function wor_handle_submit() {
 		$alias = $p( 'alias', 80 );
 		$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
 		$base  = $p( 'base', 80 );
-		$bio   = $p( 'bio', 800 );
+		$bio   = $p( 'bio', 1000 );
 		if ( '' === $alias || '' === $base || '' === $bio || ! is_email( $email ) ) {
 			wor_submit_back( $token, 'Please fill in your name or alias, a valid email, where you are based and a short bio.' );
 		}

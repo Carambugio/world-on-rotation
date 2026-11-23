@@ -494,3 +494,7 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city .pm{width:26px;height:26px}
 .glabel.city .pm text{font-size:8px}
 .glabel.city.grp .cnt{width:26px;height:26px;font-size:11px}
+
+/* A group is one clean stamp with the number of places, nothing behind it */
+.glabel.city.grp .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))!important}
+.glabel.city.grp .pm .o{stroke-width:2.2}

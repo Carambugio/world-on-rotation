@@ -111,3 +111,8 @@ dd a{text-decoration-color:var(--accent);text-underline-offset:3px}
 .page-body p,.page-body li,.page-body .lede,.page-body .note,.page-body .credits,.page-body .motto.big{font-size:15px;line-height:1.6}
 .page-body .note{font-family:var(--f-body)}
 .page-body .credits{margin-top:0}
+
+.qa{margin-top:28px;display:flex;flex-direction:column;gap:6px}
+.qa h2{margin:0 0 6px}
+.qa h3{margin:14px 0 0;font-family:var(--f-body);font-size:15px;font-weight:600;line-height:1.4;letter-spacing:0;text-transform:none;color:var(--accent,#f0b45e)}
+.qa p{margin:0;font-size:15px;line-height:1.6}

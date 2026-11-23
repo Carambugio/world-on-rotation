@@ -43,6 +43,22 @@ if ( wort_need_plugin() ) :
 	</div>
 	<p class="lede"><?php echo esc_html( $wort_p['desc'] ); ?></p>
 	<?php echo wort_player( $wort_p ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	<?php
+	$wort_qa = array_filter( preg_split( '/\R\s*\R/', trim( (string) get_post_meta( get_queried_object_id(), '_wor_qa', true ) ) ) );
+	if ( $wort_qa ) :
+		?>
+	<div class="qa"><h2>Q&amp;A with <?php echo esc_html( $wort_comp['name'] ); ?></h2>
+		<?php
+		foreach ( $wort_qa as $wort_pair ) {
+			$wort_lines = preg_split( '/\R/', trim( $wort_pair ), 2 );
+			if ( count( $wort_lines ) < 2 ) {
+				continue;
+			}
+			echo '<h3>' . esc_html( $wort_lines[0] ) . '</h3><p>' . wort_rich( $wort_lines[1] ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+		?>
+	</div>
+	<?php endif; ?>
 	<p class="actions"><a class="btn primary" href="<?php echo esc_url( home_url( '/#city-' . $wort_c['slug'] ) ); ?>">See <?php echo esc_html( $wort_p['city'] ); ?> on the globe</a><a class="btn" href="<?php echo esc_url( $wort_c['url'] ); ?>">The sound of <?php echo esc_html( $wort_p['city'] ); ?></a><a class="btn" href="<?php echo esc_url( $wort_comp['url'] ); ?>">More from <?php echo esc_html( $wort_first ); ?></a></p>
 </article>
 		<?php if ( $wort_same ) : ?>

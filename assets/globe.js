@@ -102,6 +102,8 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .pointsData(CITIES).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
+  .arcsData([]).arcColor(() => ["rgba(255,199,110,0.2)", "rgba(255,199,110,0.95)"]).arcStroke(0.5).arcAltitudeAutoScale(0.42)
+  .arcDashLength(0.35).arcDashGap(0.12).arcDashInitialGap(1).arcDashAnimateTime(2600).arcsTransitionDuration(0)
   .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude(0.006).htmlTransitionDuration(0)
   .htmlElement(labelEl).htmlElementVisibilityModifier((el, vis) => { el.style.opacity = vis ? 1 : 0; el.style.pointerEvents = vis ? "" : "none"; const s = el.firstChild; if(s) s.style.pointerEvents = vis ? "auto" : "none"; })
 ;
@@ -836,6 +838,8 @@ function showRecord(){
 intro.addEventListener("pointermove", e => { if(entering) return; const r = intro.getBoundingClientRect(), d = deckAt(e.clientX - r.left, e.clientY - r.top); xfTarget = d ? (d.side === "A" ? -0.7 : 0.7) : (current ? (current.lat >= 0 ? -1 : 1) : 0); intro.style.cursor = d ? "pointer" : "default"; });
 intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); enterGlobe(deckAt(e.clientX - r.left, e.clientY - r.top)); });
 function playMix(p){
+  const from = current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null), to = CITIES.find(x => x.city === p.city);
+  if(from && to && from !== to) world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon}]);
   current = p;
   const bar = $("#bar");
   $("#bar-art").innerHTML = stamp(p, 44);

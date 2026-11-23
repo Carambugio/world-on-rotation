@@ -2,6 +2,7 @@ const TX = Object.assign({traditions:"Traditions and instruments",eras:"Key eras
 const CITY_INFO = WOR.places;
 const LINKS = WOR.links;
 const COUNTRY_INFO = WOR.countries;
+const IMGV = "?v=" + (WOR.v || "");
 /* ---------- Helpers ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -92,7 +93,7 @@ function labelEl(d){
 }
 const PIN = "#ffc76e", PIN_ON = "#fff4dc";
 const world = Globe({animateIn:false})(document.getElementById("globeViz"))
-  .globeImageUrl(WOR.img + "earth-blue-marble.jpg").bumpImageUrl(WOR.img + "earth-topology.png").backgroundColor("rgba(0,0,0,0)")
+  .globeImageUrl(WOR.img + "earth-blue-marble.jpg" + IMGV).bumpImageUrl(WOR.img + "earth-topology.png" + IMGV).backgroundColor("rgba(0,0,0,0)")
   .showAtmosphere(true).atmosphereColor("#7fb6ff").atmosphereAltitude(0.16)
   .pathsData(BORDERS).pathPoints(d => d).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(0.002)
   .pathColor(() => "rgba(255,255,255,0.2)").pathStroke(null).pathTransitionDuration(0)
@@ -149,13 +150,13 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     const roomy = Math.min(screen.width, screen.height) >= 600 && caps.maxTextureSize >= 8192 && !(navigator.connection && navigator.connection.saveData);
     let hd = false, fine = null, fineOn = false;
     window.wantDetail = alt => {
-      if(alt < 1.1 && !hd){
+      if(alt < 1.6 && !hd){
         hd = true;
-        if(roomy) img(WOR.img + "earth-hd.jpg").then(i => {
+        if(roomy) img(WOR.img + "earth-hd.jpg" + IMGV).then(i => {
           const t = new Tex(i), old = mat.map; if(old.colorSpace) t.colorSpace = old.colorSpace;
           t.anisotropy = aniso; t.needsUpdate = true; mat.map = t; mat.needsUpdate = true; old.dispose();
         }).catch(() => {});
-        fetch(WOR.img + "borders-50m.json").then(r => r.json()).then(l => { fine = l; wantDetail(world.pointOfView().altitude); }).catch(() => {});
+        fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json()).then(l => { fine = l; wantDetail(world.pointOfView().altitude); }).catch(() => {});
       }
       if(!fine) return;
       if(alt < 1.1 && !fineOn){ fineOn = true; world.pathsData(fine); }
@@ -163,11 +164,11 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
     };
     wantDetail(world.pointOfView().altitude);
     try {
-      const w = await img(WOR.img + "earth-water.jpg"), wt = new Tex(w); wt.needsUpdate = true;
+      const w = await img(WOR.img + "earth-water.jpg" + IMGV), wt = new Tex(w); wt.needsUpdate = true;
       mat.specularMap = wt; mat.specular.set("#5b6b7a"); mat.shininess = 16; mat.needsUpdate = true;
     } catch(e){}
     try {
-      const c = await img(WOR.img + "clouds.jpg"), ct = new Tex(c); ct.needsUpdate = true;
+      const c = await img(WOR.img + "clouds.jpg" + IMGV), ct = new Tex(c); ct.needsUpdate = true;
       const R = world.getGlobeRadius(), seg = globe.geometry.parameters || {};
       const geo = new globe.geometry.constructor(R * 1.011, seg.widthSegments || 75, seg.heightSegments || 75);
       const cm = new mat.constructor({ color: 0xffffff, alphaMap: ct, transparent: true, opacity: cloudOp, depthWrite: false, shininess: 0 });
@@ -660,7 +661,7 @@ let EARTH_TEX = null;
     const g = cv.getContext("2d"); g.drawImage(im, 0, 0, w, h);
     try { EARTH_TEX = {w, h, d: g.getImageData(0, 0, w, h).data}; if(RIG) buildRecord(); } catch(e){}
   };
-  im.src = WOR.img + "earth-blue-marble.jpg";
+  im.src = WOR.img + "earth-blue-marble.jpg" + IMGV;
 })();
 function earthDisc(sd, px){
   const out = document.createElement("canvas"); out.width = out.height = px;

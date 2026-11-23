@@ -1,7 +1,7 @@
 <?php
 /**
- * A personal monogram for selectors without a photo or logo: large initials and their name on a solid
- * ink background, drawn as an SVG at /?wor_badge=<selector slug>. Deliberately unlike the round place stamps.
+ * A personal stamp for selectors without a photo or logo: a rectangular arrival stamp with their initials
+ * and name in one of the stamp inks, drawn as an SVG at /?wor_badge=<selector slug>. Unlike the round place stamps.
  *
  * @package World_On_Rotation
  */
@@ -28,19 +28,25 @@ function wor_badge_svg( $name, $slug ) {
 	}
 	$ini  = esc_html( mb_strtoupper( $ini ) );
 	$rim  = esc_html( mb_strtoupper( mb_substr( $clean, 0, 18 ) ) );
-	$size  = mb_strlen( $ini ) > 1 ? 76 : 88;
-	$lines = '';
-	for ( $k = -10; $k <= 20; $k++ ) {   // fine diagonal engraving across the background
-		$x      = $k * 14;
-		$lines .= '<path d="M' . $x . ' 200 Q' . ( $x + 60 ) . ' 110 ' . ( $x + 100 ) . ' 100 T' . ( $x + 200 ) . ' 0"/>';
-	}
+	$size = mb_strlen( $ini ) > 1 ? 44 : 50;
+	$seed = $h % 97;
+	// A rectangular arrival stamp with cut corners: a passport stamp, but not the round postmark used for places
+	$cut  = function ( $x0, $y0, $x1, $y1, $c ) {
+		return sprintf( 'M%d %dH%dL%d %dV%dL%d %dH%dL%d %dV%dZ', $x0 + $c, $y0, $x1 - $c, $x1, $y0 + $c, $y1 - $c, $x1 - $c, $y1, $x0 + $c, $x0, $y1 - $c, $y0 + $c );
+	};
 	return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400">'
-		. '<rect width="200" height="200" fill="' . $ink . '"/>'
-		. '<g fill="none" stroke="#efe6d2" stroke-opacity=".09" stroke-width="1">' . $lines . '</g>'
-		. '<text x="100" y="96" dy="0.35em" font-size="' . $size . '" text-anchor="middle" fill="#f4ecdc" font-family="Georgia, Times New Roman, serif" font-weight="700" letter-spacing="-2">' . $ini . '</text>'
-		. '<rect x="62" y="138" width="76" height="1.6" fill="#f4ecdc" fill-opacity=".7"/>'
-		. '<text x="100" y="158" font-size="11" text-anchor="middle" fill="#f4ecdc" fill-opacity=".9" font-family="Courier New, Courier, monospace" font-weight="700" letter-spacing="2">' . $rim . '</text>'
-		. '</svg>';
+		. '<defs><filter id="worn" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="' . $seed . '" result="n"/>'
+		. '<feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.65" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter></defs>'
+		. '<rect width="200" height="200" fill="#efe6d2"/>'
+		. '<g transform="rotate(' . $rot . ' 100 100)" filter="url(#worn)" fill="none" stroke="' . $ink . '">'
+		. '<path d="' . $cut( 24, 46, 176, 154, 12 ) . '" stroke-width="4"/>'
+		. '<path d="' . $cut( 31, 53, 169, 147, 8 ) . '" stroke-width="1.3"/>'
+		. '<path d="M40 74H160M40 128H160" stroke-width="1"/>'
+		. '<g fill="' . $ink . '" stroke="none" text-anchor="middle" font-family="Courier New, Courier, monospace" font-weight="700">'
+		. '<text x="100" y="68" font-size="10" letter-spacing="3">★ SELECTOR ★</text>'
+		. '<text x="100" y="101" dy="0.35em" font-size="' . $size . '" font-family="Georgia, Times New Roman, serif" letter-spacing="1">' . $ini . '</text>'
+		. '<text x="100" y="140" font-size="9.5" letter-spacing="1.6">' . $rim . '</text>'
+		. '</g></g></svg>';
 }
 
 add_action(

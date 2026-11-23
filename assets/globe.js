@@ -103,7 +103,7 @@ const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .pointRadius(d => 0.2 + 0.09*Math.sqrt(d.items.length)).pointColor(d => d === activeCity ? PIN_ON : PIN)
   .onPointHover(d => { document.body.style.cursor = d ? "pointer" : ""; })
   .arcsData([]).arcColor(() => ["rgba(255,199,110,0.2)", "rgba(255,199,110,0.95)"]).arcStroke(0.5).arcAltitudeAutoScale(0.42)
-  .arcDashLength(0.35).arcDashGap(0.12).arcDashInitialGap(1).arcDashAnimateTime(2600).arcsTransitionDuration(0)
+  .arcDashLength(0.012).arcDashGap(0.012).arcDashInitialGap(0).arcDashAnimateTime(0).arcsTransitionDuration(0)
   .htmlElementsData([]).htmlLat("lat").htmlLng("lng").htmlAltitude(0.006).htmlTransitionDuration(0)
   .htmlElement(labelEl).htmlElementVisibilityModifier((el, vis) => { el.style.opacity = vis ? 1 : 0; el.style.pointerEvents = vis ? "" : "none"; const s = el.firstChild; if(s) s.style.pointerEvents = vis ? "auto" : "none"; })
 ;
@@ -459,9 +459,17 @@ function closePanel(){
 }
 
 /* ---------- Profile page ---------- */
+/* Every place has its own stamp ink, the same on the globe, the mix cards and the passport */
+const INKS = ["#24498a", "#a3302b", "#2d6a44", "#6a3d8f", "#0f6b70", "#8a4a14", "#a0306a", "#3d5560"];
+// Inks go round the globe in order of longitude, so neighbouring places never share one
+const INK_OF = new Map();
+function inkFor(city){
+  if(!INK_OF.size) [...CITIES].sort((a, b) => a.lon - b.lon).forEach((c, i) => INK_OF.set(c.city, INKS[i % INKS.length]));
+  return INK_OF.get(city) || INKS[(hash(plain(city)) >>> 3) % INKS.length];
+}
 function stamp(p, size=104){
   const h = hash(p.id), r = rng(h), rot = (r()*18 - 9).toFixed(1), v = h % 3;
-  const INKS = ["#24498a", "#a3302b", "#2d6a44", "#5a3d88", "#1d6466", "#7a4719"], col = INKS[(h >>> 3) % INKS.length];
+  const col = inkFor(p.city);
   const d = new Date(p.added + "T12:00:00Z");
   const date = `${String(d.getUTCDate()).padStart(2,"0")} ${["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   const uid = "s" + hash(p.id + size), city = esc(plain(p.city).toUpperCase());
@@ -838,9 +846,40 @@ function showRecord(){
 }
 intro.addEventListener("pointermove", e => { if(entering) return; const r = intro.getBoundingClientRect(), d = deckAt(e.clientX - r.left, e.clientY - r.top); xfTarget = d ? (d.side === "A" ? -0.7 : 0.7) : (current ? (current.lat >= 0 ? -1 : 1) : 0); intro.style.cursor = d ? "pointer" : "default"; });
 intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); enterGlobe(deckAt(e.clientX - r.left, e.clientY - r.top)); });
+/* ---------- A small plane flies the route when a mix starts, on the same curve as the route line ---------- */
+const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
+PLANE.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>';
+let FLIGHT = null;
+function flyPlane(a, b){
+  const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
+  if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
+  const alt = D / 2 * 0.42, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
+  const v = (lng, lat, h) => { const r = 100 * (1 + h), la = lat * Math.PI / 180, ln = lng * Math.PI / 180; return [r * Math.cos(la) * Math.sin(ln), r * Math.sin(la), r * Math.cos(la) * Math.cos(ln)]; };
+  const m1 = ip(0.25), m2 = ip(0.75);
+  FLIGHT = { P: [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)], t0: performance.now(), dur: Math.min(5600, 2400 + D * 1500) };
+}
+(function planeTick(){
+  requestAnimationFrame(planeTick);
+  if(!FLIGHT){ if(!PLANE.hidden) PLANE.hidden = true; return; }
+  const t = (performance.now() - FLIGHT.t0) / FLIGHT.dur;
+  if(t >= 1){ FLIGHT = null; return; }
+  const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const bez = (P, k) => { const u = 1 - k; return [0, 1, 2].map(i => u * u * u * P[0][i] + 3 * u * u * k * P[1][i] + 3 * u * k * k * P[2][i] + k * k * k * P[3][i]); };
+  const lla = q => { const r = Math.hypot(q[0], q[1], q[2]); return [Math.asin(q[1] / r) * 180 / Math.PI, Math.atan2(q[0], q[2]) * 180 / Math.PI, r / 100 - 1]; };
+  const p = bez(FLIGHT.P, e), q = bez(FLIGHT.P, Math.min(1, e + 0.01)), A = lla(p), B = lla(q);
+  // hidden while it is behind the globe
+  const c = world.camera().position, d = [p[0] - c.x, p[1] - c.y, p[2] - c.z];
+  const qa = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], qb = 2 * (c.x * d[0] + c.y * d[1] + c.z * d[2]), qc = c.x * c.x + c.y * c.y + c.z * c.z - 100 * 100, disc = qb * qb - 4 * qa * qc;
+  const behind = disc > 0 && (-qb - Math.sqrt(disc)) / (2 * qa) < 0.995;
+  const s1 = world.getScreenCoords(A[0], A[1], A[2]), s2 = world.getScreenCoords(B[0], B[1], B[2]);
+  const ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI + 90, sc = 0.85 + Math.min(0.5, A[2] * 2.2);
+  PLANE.hidden = behind;
+  PLANE.style.opacity = String(Math.min(1, t * 8, (1 - t) * 8));
+  PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc})`;
+})();
 function playMix(p){
   const from = current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null), to = CITIES.find(x => x.city === p.city);
-  if(from && to && from !== to) world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon}]);
+  if(from && to && from !== to){ world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon}]); if(!introOn) flyPlane(from, to); }
   current = p;
   const bar = $("#bar");
   $("#bar-art").innerHTML = stamp(p, 44);

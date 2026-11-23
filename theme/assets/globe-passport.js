@@ -743,7 +743,7 @@ let EARTH_TEX = null;
     const g = cv.getContext("2d"); g.drawImage(im, 0, 0, w, h);
     try { EARTH_TEX = {w, h, d: g.getImageData(0, 0, w, h).data}; if(RIG) buildRecord(); } catch(e){}
   };
-  im.src = WOR.img + "earth-blue-marble.jpg" + IMGV;
+  im.src = WOR.img + "earth-passport-flat.jpg" + IMGV;
 })();
 function earthDisc(sd, px){
   const out = document.createElement("canvas"); out.width = out.height = px;

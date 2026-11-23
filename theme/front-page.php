@@ -29,15 +29,19 @@ $wort_data['img']   = $wort_uri . '/assets/img/';
 $wort_data['v']     = $wort_ver;
 $wort_data['t']     = wort_t_all();
 
-// Design preview for editors: ?design=passport switches it on (remembered for 30 days), ?design=current switches it off.
+// Design preview: anyone can open ?design=passport. Editors also get their choice remembered for 30 days;
+// visitors do not, so a cached page never mixes the two designs.
 $wort_design = '';
+$wort_q      = isset( $_GET['design'] ) ? sanitize_key( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 if ( current_user_can( 'edit_posts' ) ) {
-	if ( isset( $_GET['design'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-		$wort_design = 'passport' === $_GET['design'] ? 'passport' : ''; // phpcs:ignore WordPress.Security.NonceVerification
+	if ( '' !== $wort_q ) {
+		$wort_design = 'passport' === $wort_q ? 'passport' : '';
 		setcookie( 'wor_design', $wort_design, $wort_design ? time() + 30 * DAY_IN_SECONDS : time() - 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 	} elseif ( isset( $_COOKIE['wor_design'] ) && 'passport' === $_COOKIE['wor_design'] ) {
 		$wort_design = 'passport';
 	}
+} elseif ( 'passport' === $wort_q ) {
+	$wort_design = 'passport';
 }
 $wort_globe = $wort_design ? 'globe-passport' : 'globe';
 ?><!doctype html>
@@ -93,7 +97,7 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 <script>window.WOR = <?php echo wp_json_encode( $wort_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); ?>;</script>
 <script src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
 <?php if ( $wort_design ) : ?>
-<a href="<?php echo esc_url( add_query_arg( 'design', 'current', home_url( '/' ) ) ); ?>" style="position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Passport design preview · back to current</a>
+<a href="<?php echo esc_url( add_query_arg( 'design', 'current', home_url( '/' ) ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Passport design preview · back to current</a>
 <?php endif; ?>
 <?php wp_footer(); ?>
 </body>

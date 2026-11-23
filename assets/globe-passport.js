@@ -249,7 +249,10 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           };
           setVisited();
           // The open country: a stronger wash and a red outline
-          const hlMat = overlayMat(0xe08a30, 0.42), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
+          const hlMat = overlayMat(0xa3302b, 0.8);
+          // the open country: red diagonal hatching, like a visa stamped across the page
+          hlMat.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  if(mod(gl_FragCoord.x + gl_FragCoord.y, 10.0) > 3.0) discard;"); };
+          hlMat.customProgramCacheKey = () => "wor-hatch", hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {
             hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
             if(!raw || !LAND50) return;

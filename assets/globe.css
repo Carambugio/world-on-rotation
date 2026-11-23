@@ -416,16 +416,24 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 /* Selector photos */
 .dp-photo,.mini-photo{overflow:hidden}.dp-photo img,.mini-photo img{width:100%;height:100%;object-fit:cover;display:block}
 
-/* The vehicle that travels the route: plane, train or boat */
-.wor-plane{position:absolute;left:-17px;top:-12px;width:34px;height:24px;pointer-events:none;z-index:4;will-change:transform;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
-.wor-plane svg{position:absolute;inset:0;width:100%;height:100%;display:none;overflow:visible}
-.wor-plane[data-mode="plane"] .v-plane,.wor-plane[data-mode="train"] .v-train,.wor-plane[data-mode="boat"] .v-boat{display:block}
-.wor-plane .v-plane{left:5px;width:24px}
-.wor-plane path,.wor-plane rect,.wor-plane circle{fill:#ffc76e;stroke:#1b1206;stroke-width:.8;stroke-linejoin:round}
+/* The vehicle that travels the route: plane, train, bus or boat, all in the same 40 x 26 box. The route point sits at (25px, 25px): the plane's centre, the train's wheels, the boat's keel */
+.wor-plane{--veh:#ffc76e;--veh-line:#1b1206;position:absolute;left:-25px;top:-25px;width:50px;height:30px;pointer-events:none;z-index:4;will-change:transform;transform-origin:25px 25px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5))}
+.wor-plane svg{position:absolute;display:none;overflow:visible}
+.wor-plane[data-mode="plane"] .v-plane,.wor-plane[data-mode="train"] .v-train,.wor-plane[data-mode="boat"] .v-boat,.wor-plane[data-mode="bus"] .v-bus{display:block}
+.wor-plane .v-bus{left:5px;top:0;width:40px;height:26px;animation:wor-chug .45s steps(2) infinite}
+.wor-plane .v-bus .b *{fill:var(--veh);stroke:var(--veh-line);stroke-width:.8;stroke-linejoin:round}
+.wor-plane .v-plane{left:5px;top:12px;width:40px;height:26px}
+.wor-plane .v-train{left:5px;top:0;width:40px;height:26px;animation:wor-chug .3s steps(2) infinite}
+.wor-plane .v-boat{left:5px;top:0;width:40px;height:26px;animation:wor-rock 1.6s ease-in-out infinite;transform-origin:50% 85%}
+.wor-plane .v-plane path,.wor-plane .v-boat .b *{fill:#ffc76e;stroke:#1b1206;stroke-width:.8;stroke-linejoin:round}
+.wor-plane .v-train .b *{fill:#ffc76e;stroke:#1b1206;stroke-width:.7;stroke-linejoin:round}
 .wor-plane .win,.wor-plane .win *{fill:#1b1206;stroke:none}
-.wor-plane .wh circle{fill:#1b1206;stroke:#ffc76e;stroke-width:1}
-.wor-plane .v-boat{animation:wor-rock 1.6s ease-in-out infinite;transform-origin:50% 80%}
-.wor-plane .v-train{animation:wor-chug .35s steps(2) infinite}
+.wor-plane .wh circle{fill:#1b1206;stroke:#ffc76e;stroke-width:1.3}
+.wor-plane .hub circle{fill:#ffc76e;stroke:none}
+.wor-plane .rod{fill:none;stroke:#ffc76e;stroke-width:1.4;stroke-linecap:round}
+.wor-plane .puff{fill:rgba(255,255,255,.78);stroke:none;animation:wor-puff 1.4s ease-out infinite}
+.wor-plane .p2{animation-delay:.45s}.wor-plane .p3{animation-delay:.9s}
 @keyframes wor-rock{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
-@keyframes wor-chug{0%{transform:translateY(0)}100%{transform:translateY(-.8px)}}
-@media (prefers-reduced-motion:reduce){.wor-plane svg{animation:none!important}}
+@keyframes wor-chug{0%{transform:translateY(0)}100%{transform:translateY(-.7px)}}
+@keyframes wor-puff{0%{opacity:0;transform:translate(0,2px) scale(.6)}25%{opacity:.85}100%{opacity:0;transform:translate(-4px,-5px) scale(1.4)}}
+@media (prefers-reduced-motion:reduce){.wor-plane svg,.wor-plane .puff{animation:none!important}}

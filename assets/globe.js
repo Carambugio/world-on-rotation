@@ -95,8 +95,8 @@ const PIN = "#ffc76e", PIN_ON = "#fff4dc";
 const world = Globe({animateIn:false})(document.getElementById("globeViz"))
   .globeImageUrl(WOR.img + "earth-blue-marble.jpg" + IMGV).bumpImageUrl(WOR.img + "earth-topology.png" + IMGV).backgroundColor("rgba(0,0,0,0)")
   .showAtmosphere(true).atmosphereColor("#7fb6ff").atmosphereAltitude(0.16)
-  .pathsData(BORDERS).pathPoints(d => d).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(0.002)
-  .pathColor(() => "rgba(255,255,255,0.2)").pathStroke(null).pathTransitionDuration(0)
+  .pathsData(BORDERS).pathPoints(d => d).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(p => p[2] === undefined ? 0.002 : p[2])
+  .pathColor(d => d.color || "rgba(255,255,255,0.2)").pathStroke(d => d.stroke === undefined ? null : d.stroke).pathDashLength(d => d.dash || 1).pathDashGap(d => d.gap || 0).pathDashAnimateTime(0).pathTransitionDuration(0)
   .polygonsData([]).polygonCapColor(() => "rgba(255,214,150,0.13)").polygonSideColor(() => "rgba(0,0,0,0)")
   .polygonStrokeColor(() => "rgba(255,226,170,0.85)").polygonAltitude(0.005).polygonCapCurvatureResolution(1.5).polygonsTransitionDuration(0)
   .pointsData(CITIES).pointLat("lat").pointLng("lon").pointAltitude(0.003).pointsMerge(false).pointsTransitionDuration(0)
@@ -161,8 +161,8 @@ world.ringsData(CITIES).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
         fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json()).then(l => { fine = l; wantDetail(world.pointOfView().altitude); }).catch(() => {});
       }
       if(!fine) return;
-      if(alt < 1.1 && !fineOn){ fineOn = true; world.pathsData(fine); }
-      else if(alt > 1.5 && fineOn){ fineOn = false; world.pathsData(BORDERS); }
+      if(alt < 1.1 && !fineOn){ fineOn = true; BASEPATHS = fine; setPaths(); }
+      else if(alt > 1.5 && fineOn){ fineOn = false; BASEPATHS = BORDERS; setPaths(); }
     };
     wantDetail(world.pointOfView().altitude);
     try {
@@ -852,8 +852,9 @@ intro.addEventListener("click", e => { const r = intro.getBoundingClientRect(); 
 const PLANE = document.createElement("div"); PLANE.className = "wor-plane"; PLANE.hidden = true;
 PLANE.innerHTML =
   '<svg class="v-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6c.9 0 1.4 1 1.4 2.3v5.4l7.4 4.4v2.1l-7.4-2.3v4.6l2.3 1.8v1.7L12 20.7l-3.7.9v-1.7l2.3-1.8V13.5l-7.4 2.3v-2.1l7.4-4.4V3.9c0-1.3.5-2.3 1.4-2.3z"/></svg>' +
-  '<svg class="v-train" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><rect x="2" y="3" width="9" height="12" rx="1.2"/><rect x="10" y="7" width="16" height="8" rx="3.2"/><rect x="20.5" y="2.5" width="3.6" height="5.5" rx=".8"/><path d="M26 10.5l5.5 4.5h-5.5z"/></g><rect class="win" x="4" y="5" width="5" height="4" rx=".6"/><g class="wh"><circle cx="6.5" cy="17.5" r="2.7"/><circle cx="14" cy="17.5" r="2.7"/><circle cx="21.5" cy="17.5" r="2.7"/></g></svg>' +
-  '<svg class="v-boat" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><path d="M1.5 12.5h31l-4.5 6.5H6z"/><rect x="8" y="7" width="14" height="5.5" rx=".8"/><rect x="15" y="2" width="4" height="5.5" rx=".6"/></g><g class="win"><circle cx="11" cy="9.7" r="1"/><circle cx="14.5" cy="9.7" r="1"/><circle cx="18" cy="9.7" r="1"/></g></svg>';
+  '<svg class="v-train" viewBox="0 0 50 30" aria-hidden="true"><g class="puffs"><circle class="puff p1" cx="33.5" cy="5" r="2.2"/><circle class="puff p2" cx="31" cy="3" r="1.7"/><circle class="puff p3" cx="28.5" cy="1.8" r="1.3"/></g><g class="b"><path d="M2 8.2h14.5v-1.8H2z"/><rect x="3.2" y="8.2" width="12" height="13" rx=".8"/><rect x="15" y="12" width="22" height="9.2" rx="4.6"/><path d="M21 12.2a3.2 3.2 0 0 1 6.4 0z"/><path d="M30.6 12.4V9.6h-1.1l.9-2.9h5.2l.9 2.9h-1.1v2.8z"/><path d="M37 16.2h1.8l5.4 6.4h-7.2z"/><rect x="2.4" y="21" width="36" height="2.2" rx=".6"/></g><g class="win"><rect x="6" y="10.6" width="6.2" height="4.8" rx=".7"/><circle cx="38.3" cy="14.3" r="1.35"/><rect x="21.2" y="12.6" width=".9" height="8.4"/><rect x="28.6" y="12.6" width=".9" height="8.4"/></g><g class="wh"><circle cx="8.6" cy="24.6" r="2.9"/><circle cx="19.6" cy="24" r="3.9"/><circle cx="29" cy="24" r="3.9"/><circle cx="35.6" cy="25" r="2.4"/></g><g class="hub"><circle cx="8.6" cy="24.6" r=".9"/><circle cx="19.6" cy="24" r="1.1"/><circle cx="29" cy="24" r="1.1"/><circle cx="35.6" cy="25" r=".8"/></g><path class="rod" d="M19.6 25.2H29"/></svg>' +
+  '<svg class="v-boat" viewBox="0 0 34 22" aria-hidden="true"><g class="b"><path d="M1.5 12.5h31l-4.5 6.5H6z"/><rect x="8" y="7" width="14" height="5.5" rx=".8"/><rect x="15" y="2" width="4" height="5.5" rx=".6"/></g><g class="win"><circle cx="11" cy="9.7" r="1"/><circle cx="14.5" cy="9.7" r="1"/><circle cx="18" cy="9.7" r="1"/></g></svg>' +
+  '<svg class="v-bus" viewBox="0 0 44 24" aria-hidden="true"><g class="b"><path d="M3 5.5c0-1.4 1.1-2.5 2.5-2.5h29c2.4 0 4.3 1.4 5 3.6l1.6 5.4c.3.9.4 1.8.4 2.7V17c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2z"/><rect x="2.2" y="15.2" width="40.6" height="1.6" rx=".6"/></g><g class="win"><rect x="6" y="6" width="6" height="5" rx=".8"/><rect x="13.6" y="6" width="6" height="5" rx=".8"/><rect x="21.2" y="6" width="6" height="5" rx=".8"/><path d="M29 6h5.6c1.2 0 2.2.8 2.6 1.9l1 3.1H29z"/></g><g class="wh"><circle cx="11" cy="19" r="3"/><circle cx="33" cy="19" r="3"/></g><g class="hub"><circle cx="11" cy="19" r="1"/><circle cx="33" cy="19" r="1"/></g></svg>';
 let FLIGHT = null, ROUTE = null, LANDMASK = null;
 new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = WOR.img + "land-mask.png" + IMGV; }).then(im => {
   const cv = document.createElement("canvas"); cv.width = im.width; cv.height = im.height;
@@ -861,23 +862,73 @@ new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerr
   try { const d = g.getImageData(0, 0, im.width, im.height).data, a = new Uint8Array(im.width * im.height); for(let k = 0; k < a.length; k++) a[k] = d[k * 4] > 127 ? 1 : 0; LANDMASK = { w: im.width, h: im.height, a }; } catch(e){}
 }).catch(() => {});
 function isLand(lon, lat){ const M = LANDMASK; if(!M) return true; const x = Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), y = Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0)); return M.a[y * M.w + x] === 1; }
+// Rail: the connected Eurasian network, plus countries with passenger trains of their own. Elsewhere overland is by bus.
+const RAIL_NET = new Set(["United Kingdom","Ireland","France","Belgium","Netherlands","Luxembourg","Germany","Denmark","Norway","Sweden","Finland","Poland","Czechia","Slovakia","Austria","Switzerland","Italy","Slovenia","Croatia","Bosnia & Herz.","Serbia","Montenegro","North Macedonia","Albania","Greece","Bulgaria","Romania","Hungary","Moldova","Ukraine","Belarus","Lithuania","Latvia","Estonia","Spain","Portugal","Türkiye","Georgia","Armenia","Azerbaijan","Russia","Kazakhstan","Uzbekistan","Kyrgyzstan","Tajikistan","Turkmenistan","Mongolia","China","Vietnam","Laos"]);
+const RAIL_HOME = new Set(["India","Pakistan","Bangladesh","Sri Lanka","Japan","South Korea","Taiwan","Thailand","Malaysia","Indonesia","Iran","Egypt","Morocco","Algeria","Tunisia","South Africa","Kenya","Tanzania","Ethiopia","United States","Canada","Mexico","Argentina","Australia","New Zealand","Saudi Arabia"]);
+const cname = c => c && c.ci ? c.ci.name : (c ? c.country : "");
+function byRail(a, b){
+  const x = cname(a), y = cname(b);
+  if(RAIL_NET.has(x) && RAIL_NET.has(y)) return true;
+  return x === y && (RAIL_HOME.has(x) || RAIL_NET.has(x));
+}
 function routeMode(a, b){
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]), ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
   if(!LANDMASK) return "plane";
   const n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
   for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
   const seaFrac = sea / (n - 1);
-  if(seaFrac < 0.06 && D < 0.5) return "train";   // joined by land and no more than about 3,200 km apart
+  if(seaFrac < 0.06){
+    if(byRail(a, b) && D < 0.95) return "train";   // up to about 6,000 km on a connected network
+    if(D < 0.55) return "bus";                      // up to about 3,500 km by road
+    return "plane";
+  }
   if(seaFrac > 0.6) return "boat";
   return "plane";
+}
+// A road or railway winds a little, the way real ones do; the same line every time for the same two places
+function windingLine(a, b){
+  const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 180 / Math.PI, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
+  const n = Math.max(24, Math.ceil(D / 0.15)), r = rng(hash(a.city + ">" + b.city)), k1 = 1.5 + r() * 2, k2 = 3 + r() * 3, ph1 = r() * 6.28, ph2 = r() * 6.28;
+  const amp = Math.min(1.2, D * 0.07), pts = [];
+  for(let i = 0; i <= n; i++){
+    const t = i / n, q = ip(t), q0 = ip(Math.max(0, t - 0.01)), q1 = ip(Math.min(1, t + 0.01));
+    const cos = Math.max(0.2, Math.cos(q[1] * Math.PI / 180)), dx = (q1[0] - q0[0]) * cos, dy = q1[1] - q0[1], L = Math.hypot(dx, dy) || 1;
+    const off = amp * Math.sin(Math.PI * t) * (0.65 * Math.sin(k1 * Math.PI * t + ph1) + 0.35 * Math.sin(k2 * Math.PI * t + ph2));
+    pts.push([q[0] + (-dy / L) * off / cos, q[1] + (dx / L) * off]);
+  }
+  pts[0] = [a.lon, a.lat]; pts[n] = [b.lon, b.lat];
+  return pts;
+}
+let BASEPATHS = BORDERS, ROUTEPATHS = [];
+function setPaths(){ world.pathsData(BASEPATHS.concat(ROUTEPATHS)); }
+// Draw the route: a railway or a road for land, a dotted line for sea and air
+function drawRoute(a, b, mode){
+  let line = null; ROUTEPATHS = [];
+  if(mode === "train" || mode === "bus"){
+    line = windingLine(a, b);
+    const len = d3.geoLength({ type: "LineString", coordinates: line }) * 180 / Math.PI || 1;
+    const lift = (pts, h) => { const x = pts.map(q => [q[0], q[1], h]); return x; };
+    if(mode === "train"){
+      const base = lift(line, 0.0045); base.color = "#1a140a"; base.stroke = 3.4;
+      const ties = lift(line, 0.005); ties.color = "#ffc76e"; ties.stroke = 1.6; ties.dash = 0.35 / len; ties.gap = 0.35 / len;
+      ROUTEPATHS = [base, ties];
+    } else {
+      const edge = lift(line, 0.0045); edge.color = "#1a140a"; edge.stroke = 4.6;
+      const road = lift(line, 0.005); road.color = "#ffd58f"; road.stroke = 2.8;
+      const mid = lift(line, 0.0055); mid.color = "#1a140a"; mid.stroke = 0.8; mid.dash = 0.25 / len; mid.gap = 0.25 / len;
+      ROUTEPATHS = [edge, road, mid];
+    }
+    world.arcsData([]);
+  } else world.arcsData([{ startLat: a.lat, startLng: a.lon, endLat: b.lat, endLng: b.lon, alt: mode === "plane" ? null : 0 }]);
+  setPaths();
+  return line;
 }
 // The vehicle keeps travelling the route, again and again, for as long as its destination is the selected place
 function flyPlane(a, b){
   ROUTE = { from: a, to: b };
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]); if(D < 0.003) return;
   if(!PLANE.parentNode){ const host = world.renderer().domElement.parentElement; host.appendChild(PLANE); }
-  const mode = ROUTE.mode = routeMode(a, b);
-  world.arcsData([{ startLat: a.lat, startLng: a.lon, endLat: b.lat, endLng: b.lon, alt: mode === "plane" ? null : 0 }]);
+  const mode = ROUTE.mode = routeMode(a, b), line = drawRoute(a, b, mode);
   PLANE.dataset.mode = mode;
   const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);
   const v = (lng, lat, h) => { const r = 100 * (1 + h), la = lat * Math.PI / 180, ln = lng * Math.PI / 180; return [r * Math.cos(la) * Math.sin(ln), r * Math.sin(la), r * Math.cos(la) * Math.cos(ln)]; };
@@ -885,8 +936,12 @@ function flyPlane(a, b){
   if(mode === "plane"){
     const alt = D / 2 * 0.42, m1 = ip(0.25), m2 = ip(0.75), P = [v(a.lon, a.lat, 0), v(m1[0], m1[1], alt * 1.5), v(m2[0], m2[1], alt * 1.5), v(b.lon, b.lat, 0)];
     at = k => { const u = 1 - k; return [0, 1, 2].map(i => u * u * u * P[0][i] + 3 * u * u * k * P[1][i] + 3 * u * k * k * P[2][i] + k * k * k * P[3][i]); };
+  } else if(line){
+    const cum = [0]; for(let i = 1; i < line.length; i++) cum.push(cum[i - 1] + d3.geoDistance(line[i - 1], line[i]));
+    const tot = cum[cum.length - 1] || 1;
+    at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.008); };
   } else at = k => { const q = ip(k); return v(q[0], q[1], 0.007); };
-  const slow = mode === "plane" ? 1 : 1.35;
+  const slow = mode === "plane" ? 1 : mode === "boat" ? 1.35 : 1.5;
   FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode };
 }
 (function planeTick(){
@@ -907,7 +962,10 @@ function flyPlane(a, b){
   const s1 = world.getScreenCoords(A[0], A[1], A[2]), s2 = world.getScreenCoords(B[0], B[1], B[2]);
   let ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI, flip = 1;
   if(FLIGHT.mode === "plane") ang += 90;                      // seen from above, nose first
-  else if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }   // seen from the side, never upside down
+  else {                                                       // seen from the side: faces left or right, tilts at most 30 degrees
+    if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }
+    ang = Math.max(-30, Math.min(30, ang));
+  }
   const sc = FLIGHT.mode === "plane" ? 0.85 + Math.min(0.5, A[2] * 2.2) : 1;
   PLANE.hidden = behind;
   PLANE.style.opacity = String(Math.min(1, t * 8, (1 - t) * 8));
@@ -915,7 +973,7 @@ function flyPlane(a, b){
 })();
 function playMix(p){
   const from = current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null), to = CITIES.find(x => x.city === p.city);
-  if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const m = routeMode(from, to); ROUTE = { from, to, mode: m }; world.arcsData([{startLat:from.lat, startLng:from.lon, endLat:to.lat, endLng:to.lon, alt: m === "plane" ? null : 0}]); } }
+  if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const m = routeMode(from, to); ROUTE = { from, to, mode: m }; drawRoute(from, to, m); } }
   current = p;
   const bar = $("#bar");
   $("#bar-art").innerHTML = stamp(p, 44);

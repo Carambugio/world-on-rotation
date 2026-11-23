@@ -183,14 +183,24 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
       mat.specularMap = wt; mat.specular.set("#5b6b7a"); mat.shininess = 16; mat.needsUpdate = true;
     } catch(e){}
     try {
-      const c = await img(WOR.img + "clouds.jpg" + IMGV), ct = new Tex(c); ct.needsUpdate = true;
+      // Yesterday's real clouds from NASA when the server has them, otherwise the bundled picture
+      const live = WOR.sky && WOR.sky.clouds;
+      const c = await (live ? img(WOR.sky.clouds).catch(() => img(WOR.img + "clouds.jpg" + IMGV)) : img(WOR.img + "clouds.jpg" + IMGV)), ct = new Tex(c); ct.needsUpdate = true;
       const R = world.getGlobeRadius(), seg = globe.geometry.parameters || {};
       const geo = new globe.geometry.constructor(R * 1.011, seg.widthSegments || 75, seg.heightSegments || 75);
       const cm = new mat.constructor({ color: 0xffffff, alphaMap: ct, transparent: true, opacity: cloudOp, depthWrite: false, shininess: 0 });
       clouds = new globe.constructor(geo, cm); clouds.renderOrder = 1; clouds.raycast = () => {};
       world.scene().add(clouds); setCloudsFor(world.pointOfView().altitude);
       const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      (function drift(){ if(!still) clouds.rotation.y += 0.00006; requestAnimationFrame(drift); })();
+      if(!live) (function drift(){ if(!still) clouds.rotation.y += 0.00006; requestAnimationFrame(drift); })();   // real clouds stay where they were
+      if(WOR.sky && WOR.sky.snow){                                                                                   // and real snow and sea ice under them
+        try {
+          const sImg = await img(WOR.sky.snow), st = new Tex(sImg); st.needsUpdate = true;
+          const sm = new mat.constructor({ color: 0xf3f6fa, alphaMap: st, transparent: true, opacity: 0.88, depthWrite: false, shininess: 8 });
+          const snow = new globe.constructor(new globe.geometry.constructor(R * 1.0015, seg.widthSegments || 75, seg.heightSegments || 75), sm);
+          snow.renderOrder = 0.5; snow.raycast = () => {}; world.scene().add(snow);
+        } catch(e){}
+      }
     } catch(e){}
   });
 })();

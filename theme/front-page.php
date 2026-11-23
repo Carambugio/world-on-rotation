@@ -26,6 +26,7 @@ if ( function_exists( 'wor_data' ) ) {
 }
 $wort_data['slugs'] = array( 'places' => (object) $wort_slugs['places'], 'countries' => (object) $wort_slugs['countries'] );
 $wort_data['img']   = $wort_uri . '/assets/img/';
+$wort_data['sky']   = function_exists( 'wor_sky_data' ) ? wor_sky_data() : array();
 $wort_data['v']     = $wort_ver;
 $wort_data['t']     = wort_t_all();
 

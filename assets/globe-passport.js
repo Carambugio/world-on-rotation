@@ -170,7 +170,8 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
       if(!fine) return;
     };
     wantDetail(world.pointOfView().altitude);
-    Promise.all([img(WOR.img + "land-paper.jpg" + IMGV), fetch(WOR.img + "land-50m.json" + IMGV).then(r => r.json()), fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json())]).then(([pi, shapes, lines]) => {
+    // The land shape is built ahead of time (land-mesh.bin), so the browser only has to draw it.
+    Promise.all([img(WOR.img + "land-paper.jpg" + IMGV), fetch(WOR.img + "land-mesh.bin" + IMGV).then(r => r.arrayBuffer()), fetch(WOR.img + "borders-50m.json" + IMGV).then(r => r.json())]).then(([pi, bin, lines]) => {
       const lt = new Tex(pi); if(mat.map.colorSpace) lt.colorSpace = mat.map.colorSpace; lt.anisotropy = aniso; lt.needsUpdate = true;
       const landMat = new mat.constructor({ color: 0xffffff, shininess: 0 }); if(landMat.specular) landMat.specular.set("#000000");
       const landUni = { value: lt };
@@ -190,7 +191,6 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
   diffuseColor.rgb *= textureGrad(landTex, luv, dx, dy).rgb;`);
       };
       landMat.customProgramCacheKey = () => "wor-land";
-      LAND50 = shapes.map(f => ({ type: "Feature", n: f.n, geometry: f.g }));
       // Borrow three.js classes from globe.gl through a throwaway shape, then build all land as one mesh and all lines as one object.
       world.polygonStrokeColor(() => "#000").polygonsData([{ type: "Feature", n: "", geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] } }]);
       const probe = () => {
@@ -220,7 +220,12 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
         };
         step();
         };
-        merged(LAND50, geo => {
+        {
+          const head = new Uint32Array(bin, 0, 2), nV = head[0], nI = head[1];
+          const q = new Int16Array(bin, 8, nV * 3), ind = new Uint32Array(bin, 8 + Math.ceil(nV * 6 / 4) * 4, nI);
+          const pos = new Float32Array(nV * 3), nor = new Float32Array(nV * 3);
+          for(let k = 0; k < nV * 3; k += 3){ const x = q[k], y = q[k + 1], z = q[k + 2], r = Math.hypot(x, y, z) || 1; nor[k] = x / r; nor[k + 1] = y / r; nor[k + 2] = z / r; pos[k] = nor[k] * 100; pos[k + 1] = nor[k + 1] * 100; pos[k + 2] = nor[k + 2] * 100; }
+          const geo = new BG(); geo.setAttribute("position", new Attr(pos, 3)); geo.setAttribute("normal", new Attr(nor, 3)); geo.setIndex(new Attr(ind, 1));
           const land = new Mesh(geo, landMat); land.scale.setScalar(1.003); world.scene().add(land);
           const lp = [], toXYZ = (lng, lat, r) => { const ph = (90 - lat) * Math.PI / 180, th = (90 - lng) * Math.PI / 180; return [r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)]; };
           // Long straight borders get extra points every half degree, so the line follows the curve of the globe instead of cutting under the land.
@@ -235,6 +240,7 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           // Countries you have stamped in your passport get a light wash
           const visMat = overlayMat(0xb8915a, 0.2); let visObj = null, visKey = "";
           window.setVisited = () => {
+            if(!LAND50) return;
             const set = new Set(Object.keys(MYPASS).map(city => { const c = CITIES.find(x => x.city === city); return c && c.ci ? c.ci.raw : null; }).filter(Boolean));
             const key = [...set].sort().join("|"); if(key === visKey) return; visKey = key;
             merged(LAND50.filter(f => set.has(f.n)), g => { if(visKey !== key){ g.dispose(); return; } if(visObj){ world.scene().remove(visObj); visObj.geometry.dispose(); } visObj = new Mesh(g, visMat); visObj.scale.setScalar(1.003); world.scene().add(visObj); });
@@ -244,14 +250,18 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           const hlMat = overlayMat(0xe08a30, 0.42), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {
             hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
-            if(!raw) return;
+            if(!raw || !LAND50) return;
             const feats = LAND50.filter(f => f.n === raw); if(!feats.length) return;
             const rings = []; feats.forEach(f => f.geometry.coordinates.forEach(pc => pc.forEach(r => rings.push(r))));
             const line = new Seg(segs(rings, 100.36), hlLine); world.scene().add(line); hlObjs.push(line);
             merged(feats, g => { if(hlWant !== raw){ g.dispose(); return; } const m = new Mesh(g, hlMat); m.scale.setScalar(1.003); world.scene().add(m); hlObjs.push(m); });
           };
-          if(HLRAW) setHL(HLRAW);
-        });
+          // Country outlines for the passport wash and the open country load after the globe is drawn
+          fetch(WOR.img + "land-50m.json" + IMGV).then(r => r.json()).then(shapes => {
+            LAND50 = shapes.map(f => ({ type: "Feature", n: f.n, geometry: f.g }));
+            setVisited(); if(HLRAW) setHL(HLRAW);
+          }).catch(() => {});
+        }
       };
       probe();
     }).catch(e => console.warn(e));

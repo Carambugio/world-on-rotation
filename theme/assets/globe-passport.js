@@ -1073,10 +1073,32 @@ function planRoute(a, b){
     res = { mode: sea / (n - 1) > 0.6 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
   }
   // follow the real railway or main road when the data has one
-  if(res.mode === "train" || res.mode === "bus"){ if(!NETLOAD) loadNets(); const real = netPath(res.mode === "train" ? "rail" : "road", a, b); if(real) res.line = real.line; }
+  if(res.mode === "train" || res.mode === "bus"){ if(!NETLOAD) loadNets(); const real = netPath(res.mode === "train" ? "rail" : "road", a, b); if(real) res.line = smoothLine(real.line); }
   PLANS.set(key, res); return res;
 }
 function routeMode(a, b){ return planRoute(a, b).mode; }
+// Real lines come with small kinks from the data: resample every 4 km and smooth them, so the line and the vehicle on it flow
+function smoothLine(pts){
+  const step = 4 / 6371, rs = [pts[0]]; let need = step;
+  for(let i = 1; i < pts.length; i++){
+    const p0 = pts[i - 1], p1 = pts[i], L = d3.geoDistance(p0, p1); if(!L) continue;
+    const ip = d3.geoInterpolate(p0, p1); let at = 0;
+    while(L - at >= need){ at += need; rs.push(ip(at / L)); need = step; }
+    need -= L - at;
+  }
+  rs.push(pts[pts.length - 1]);
+  let cur = rs;
+  for(let pass = 0; pass < 3; pass++){
+    const nx = cur.map((q, i) => {
+      if(i === 0 || i === cur.length - 1) return q;
+      const w = Math.min(5, i, cur.length - 1 - i); let x = 0, y = 0;
+      for(let k = -w; k <= w; k++){ x += cur[i + k][0]; y += cur[i + k][1]; }
+      return [x / (2 * w + 1), y / (2 * w + 1)];
+    });
+    cur = nx;
+  }
+  return cur;
+}
 // Real railways and main roads (Natural Earth, public domain): loaded once after the globe, then used to trace train and bus routes
 const NETS = { rail: null, road: null }; let NETLOAD = null;
 function loadNets(){
@@ -1183,8 +1205,8 @@ function flyPlane(a, b){
     const tot = cum[cum.length - 1] || 1;
     at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.0052); };
   } else at = k => { const q = ip(k); return v(q[0], q[1], 0.002); };
-  const slow = mode === "plane" ? 1 : mode === "boat" ? 1.35 : 1.5;
-  FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode };
+  const slow = mode === "plane" ? 1 : mode === "boat" ? 1.35 : 1.5, km = line ? d3.geoLength({ type: "LineString", coordinates: line }) * 6371 : D * 6371;
+  FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode, span: Math.min(0.08, Math.max(0.005, 50 / (km || 1))) };
 }
 (function planeTick(){
   requestAnimationFrame(planeTick);
@@ -1192,7 +1214,7 @@ function flyPlane(a, b){
   const stay = activeCity && activeCity === FLIGHT.to;
   if(stay) FLIGHT.seen = true; else if(FLIGHT.seen){ FLIGHT = null; PLANE.hidden = true; return; } // the place was closed: the vehicle goes
   let t = (performance.now() - FLIGHT.t0) / FLIGHT.dur;
-  if(t >= 1){ if(stay){ FLIGHT.t0 = performance.now() + 700; } else { FLIGHT = null; } return; }
+  if(t >= 1){ if(stay){ FLIGHT.t0 = performance.now() + 700; FLIGHT.hs = FLIGHT.left = undefined; } else { FLIGHT = null; } return; }
   if(t < 0){ PLANE.hidden = true; if(!stay) FLIGHT = null; return; }
   const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   const lla = q => { const r = Math.hypot(q[0], q[1], q[2]); return [Math.asin(q[1] / r) * 180 / Math.PI, Math.atan2(q[0], q[2]) * 180 / Math.PI, r / 100 - 1]; };
@@ -1205,10 +1227,13 @@ function flyPlane(a, b){
   let ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI, flip = 1;
   if(FLIGHT.mode === "plane") ang += 45;                      // the plane emoji points up and to the right
   else {                                                       // seen from the side: the body lies along the line and turns with it, never upside down
-    const u = FLIGHT.at(Math.max(0, e - 0.006)), w = FLIGHT.at(Math.min(1, e + 0.006)), U = lla(u), V = lla(w);
+    const sp = FLIGHT.span || 0.01, u = FLIGHT.at(Math.max(0, e - sp)), w = FLIGHT.at(Math.min(1, e + sp)), U = lla(u), V = lla(w);
     const a1 = world.getScreenCoords(U[0], U[1], U[2]), a2 = world.getScreenCoords(V[0], V[1], V[2]);
-    ang = Math.atan2(a2.y - a1.y, a2.x - a1.x) * 180 / Math.PI;
-    if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }
+    const raw = Math.atan2(a2.y - a1.y, a2.x - a1.x) * 180 / Math.PI, wrap = x => ((x + 540) % 360) - 180;
+    FLIGHT.hs = FLIGHT.hs === undefined ? raw : wrap(FLIGHT.hs + wrap(raw - FLIGHT.hs) * 0.1);   // turn gently, never snap
+    const h = FLIGHT.hs, ah = Math.abs(h);
+    if(FLIGHT.left === undefined) FLIGHT.left = ah > 90; else if(FLIGHT.left && ah < 70) FLIGHT.left = false; else if(!FLIGHT.left && ah > 110) FLIGHT.left = true;
+    if(FLIGHT.left){ flip = -1; ang = h > 0 ? h - 180 : h + 180; } else ang = h;
   }
   const sc = FLIGHT.mode === "plane" ? 0.85 + Math.min(0.5, A[2] * 2.2) : 1;
   PLANE.hidden = behind;

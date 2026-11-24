@@ -1102,9 +1102,9 @@ function drawRoute(a, b, mode, given){
       const ties = lift(line, 0.005); ties.color = "#2a2f3a"; ties.stroke = 6.5; ties.dash = 0.07 / len; ties.gap = 0.45 / len;
       const rail = lift(line, 0.0052); rail.color = "#2a2f3a"; rail.stroke = 1.6;
       ROUTEPATHS = [halo, ties, rail];
-    } else {                                                  // a map road: one solid line in stamp ink
-      const halo = lift(line, 0.0045); halo.color = "rgba(246,239,226,0.8)"; halo.stroke = 5;
-      const road = lift(line, 0.005); road.color = "#a3302b"; road.stroke = 2.4;
+    } else {                                                  // a map road: one solid black line on a pale edge
+      const halo = lift(line, 0.0045); halo.color = "rgba(246,239,226,0.85)"; halo.stroke = 5;
+      const road = lift(line, 0.005); road.color = "#151515"; road.stroke = 2.4;
       ROUTEPATHS = [halo, road];
     }
     world.arcsData([]);

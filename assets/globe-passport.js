@@ -250,7 +250,7 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
             if(!LAND50) return;
             const set = new Set(Object.keys(MYPASS).map(city => { const c = CITIES.find(x => x.city === city); return c && c.ci ? c.ci.raw : null; }).filter(Boolean));
             const key = [...set].sort().join("|"); if(key === visKey) return; visKey = key;
-            merged(LAND50.filter(f => set.has(f.n)), g => { if(visKey !== key){ g.dispose(); return; } if(visObj){ world.scene().remove(visObj); visObj.geometry.dispose(); } visObj = new Mesh(g, visMat); visObj.scale.setScalar(1.003); world.scene().add(visObj); });
+            merged(LAND50.filter(f => set.has(f.n)), g => { if(visKey !== key){ g.dispose(); return; } if(visObj){ world.scene().remove(visObj); visObj.geometry.dispose(); } visObj = new Mesh(g, visMat); visObj.scale.setScalar(1.0042); world.scene().add(visObj); });
           };
           setVisited();
           // The open country: a stronger wash and a red outline
@@ -260,8 +260,8 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
             if(!raw || !LAND50) return;
             const feats = LAND50.filter(f => f.n === raw); if(!feats.length) return;
             const rings = []; feats.forEach(f => f.geometry.coordinates.forEach(pc => pc.forEach(r => rings.push(r))));
-            const line = new Seg(segs(rings, 100.36), hlLine); world.scene().add(line); hlObjs.push(line);
-            merged(feats, g => { if(hlWant !== raw){ g.dispose(); return; } const m = new Mesh(g, hlMat); m.scale.setScalar(1.003); world.scene().add(m); hlObjs.push(m); });
+            const line = new Seg(segs(rings, 100.46), hlLine); world.scene().add(line); hlObjs.push(line);
+            merged(feats, g => { if(hlWant !== raw){ g.dispose(); return; } const m = new Mesh(g, hlMat); m.scale.setScalar(1.0042); world.scene().add(m); hlObjs.push(m); });
           };
           // Country outlines for the passport wash and the open country load after the globe is drawn
           fetch(WOR.img + "land-50m.json" + IMGV).then(r => r.json()).then(shapes => {
@@ -1097,15 +1097,15 @@ function drawRoute(a, b, mode, given){
     line = given || windingLine(a, b);
     const len = d3.geoLength({ type: "LineString", coordinates: line }) * 180 / Math.PI || 1;
     const lift = (pts, h) => { const x = pts.map(q => [q[0], q[1], h]); return x; };
-    if(mode === "train"){
-      const base = lift(line, 0.0045); base.color = "#2a2f3a"; base.stroke = 3.4;
-      const ties = lift(line, 0.005); ties.color = "#efe6d2"; ties.stroke = 1.6; ties.dash = 0.35 / len; ties.gap = 0.35 / len;
-      ROUTEPATHS = [base, ties];
-    } else {
-      const edge = lift(line, 0.0045); edge.color = "#2a2f3a"; edge.stroke = 4.6;
-      const road = lift(line, 0.005); road.color = "#f4ead2"; road.stroke = 2.8;
-      const mid = lift(line, 0.0055); mid.color = "#a3302b"; mid.stroke = 0.8; mid.dash = 0.25 / len; mid.gap = 0.25 / len;
-      ROUTEPATHS = [edge, road, mid];
+    if(mode === "train"){                                    // a map railway: a thin line crossed by sleepers
+      const halo = lift(line, 0.0045); halo.color = "rgba(246,239,226,0.8)"; halo.stroke = 5;
+      const ties = lift(line, 0.005); ties.color = "#2a2f3a"; ties.stroke = 6.5; ties.dash = 0.07 / len; ties.gap = 0.45 / len;
+      const rail = lift(line, 0.0052); rail.color = "#2a2f3a"; rail.stroke = 1.6;
+      ROUTEPATHS = [halo, ties, rail];
+    } else {                                                  // a map road: one solid line in stamp ink
+      const halo = lift(line, 0.0045); halo.color = "rgba(246,239,226,0.8)"; halo.stroke = 5;
+      const road = lift(line, 0.005); road.color = "#a3302b"; road.stroke = 2.4;
+      ROUTEPATHS = [halo, road];
     }
     world.arcsData([]);
   } else world.arcsData([{ startLat: a.lat, startLng: a.lon, endLat: b.lat, endLng: b.lon, alt: mode === "plane" ? null : 0 }]);
@@ -1129,8 +1129,8 @@ function flyPlane(a, b){
   } else if(line){
     const cum = [0]; for(let i = 1; i < line.length; i++) cum.push(cum[i - 1] + d3.geoDistance(line[i - 1], line[i]));
     const tot = cum[cum.length - 1] || 1;
-    at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.008); };
-  } else at = k => { const q = ip(k); return v(q[0], q[1], 0.007); };
+    at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.0052); };
+  } else at = k => { const q = ip(k); return v(q[0], q[1], 0.002); };
   const slow = mode === "plane" ? 1 : mode === "boat" ? 1.35 : 1.5;
   FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode };
 }

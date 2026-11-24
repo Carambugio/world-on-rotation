@@ -203,24 +203,6 @@ function wor_match_place( $text ) {
 	return $p && 'publish' === $p->post_status ? (int) $p->ID : 0;
 }
 
-/** The optional questions on the submission form: the same wording for every selector. */
-function wor_qa_questions() {
-	return array(
-		1 => 'Who are you, what do you do, and what ties you to the place your mix comes from?',
-		2 => 'What makes its music different from anywhere else, and what stands out in the scene right now?',
-		3 => 'Which tracks or artists in your mix should we hear first, and who else from there deserves more attention?',
-		4 => 'Tell us about a moment, a night or a person that sums up your connection to this music.',
-		5 => 'What do people get wrong about the place your mix comes from, and about its music?',
-		6 => 'How do traditional and contemporary sounds feed into each other there?',
-		7 => 'How has this music changed, where is it heading, and what part do you play in it?',
-	);
-}
-
-/** Questions are shown exactly as written. */
-function wor_qa_fill( $q, $place ) {
-	return $q;
-}
-
 function wor_field( $name, $label, $attrs = '', $help = '', $type = 'text', $value = '' ) {
 	$id = 'wor-f-' . $name;
 	$in = 'textarea' === $type
@@ -277,11 +259,6 @@ add_shortcode( 'wor_submit', function () {
 	$out .= wor_field( 'genres', 'Styles', 'maxlength="120"', 'Optional, separated by commas.' );
 	$out .= wor_field( 'desc', 'Description', 'required maxlength="750" rows="5"', 'A few lines on what it is and why. Up to 750 characters.', 'textarea' );
 	$out .= '</fieldset>';
-	$out .= '<fieldset><legend>Quick Q&amp;A (optional)</legend><p class="qa-intro">Answer any of these, or none. A few lines each is plenty. Your answers appear on the mix page.</p>';
-	foreach ( wor_qa_questions() as $i => $q ) {
-		$out .= wor_field( 'qa' . $i, wor_qa_fill( $q, '' ), 'maxlength="1500" rows="4"', '', 'textarea' );
-	}
-	$out .= '</fieldset>';
 	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on its Mixcloud and on this site, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
 	$out .= '<p><button class="btn primary" type="submit">Send it</button></p></form>';
 	return $out;
@@ -308,7 +285,7 @@ function wor_form_css() {
 .wform .hp{position:absolute!important;left:-9999px!important;height:1px;overflow:hidden}
 .wform .werr{border:1px solid #e0705e;background:rgba(224,112,94,.12);border-radius:10px;padding:10px 14px;margin:0}
 .wform .as{margin:0}
-.wform .qa-intro{margin:0;font-size:13.5px;color:var(--muted,rgba(243,238,228,.66))}
+
 .wform.done h2{margin-bottom:6px}
 </style>';
 }
@@ -428,16 +405,6 @@ function wor_handle_submit() {
 	}
 	update_post_meta( $mix_id, '_wor_audio', $audio );
 	update_post_meta( $mix_id, '_wor_tracklist', $tracks );
-	$qa = array();
-	foreach ( wor_qa_questions() as $i => $q ) {
-		$a = trim( preg_replace( '/\s+/', ' ', $p( 'qa' . $i, 1500 ) ) );
-		if ( '' !== $a ) {
-			$qa[] = wor_qa_fill( $q, $place ) . "\n" . $a;
-		}
-	}
-	if ( $qa ) {
-		update_post_meta( $mix_id, '_wor_qa', implode( "\n\n", $qa ) );
-	}
 	update_post_meta( $mix_id, '_wor_selector', (string) $selector_id );
 	update_post_meta( $mix_id, '_wor_genres', $genres );
 	update_post_meta( $mix_id, '_wor_added', current_time( 'Y-m-d' ) );

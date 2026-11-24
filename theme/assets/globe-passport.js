@@ -244,15 +244,8 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           } }); const g = new BG(); g.setAttribute("position", new Attr(new Float32Array(a), 3)); return g; };
           world.scene().add(new Seg(segs(lines, 100.34), new LineMat({ color: 0x28303f, transparent: true, opacity: 0.85 })));
           const overlayMat = (hex, op) => { const m = new mat.constructor({ color: hex, transparent: true, opacity: op, shininess: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); if(m.specular) m.specular.set("#000000"); return m; };
-          // Countries you have stamped in your passport get a light wash
-          const visMat = overlayMat(0xb8915a, 0.2); let visObj = null, visKey = "";
-          window.setVisited = () => {
-            if(!LAND50) return;
-            const set = new Set(Object.keys(MYPASS).map(city => { const c = CITIES.find(x => x.city === city); return c && c.ci ? c.ci.raw : null; }).filter(Boolean));
-            const key = [...set].sort().join("|"); if(key === visKey) return; visKey = key;
-            merged(LAND50.filter(f => set.has(f.n)), g => { if(visKey !== key){ g.dispose(); return; } if(visObj){ world.scene().remove(visObj); visObj.geometry.dispose(); } visObj = new Mesh(g, visMat); visObj.scale.setScalar(1.0042); world.scene().add(visObj); });
-          };
-          setVisited();
+          // Countries keep their colour; only the open country changes
+          window.setVisited = () => {};
           // The open country: a stronger wash and a red outline
           const hlMat = overlayMat(0xe08a30, 0.42), hlLine = new LineMat({ color: 0xa3302b }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {

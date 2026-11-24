@@ -253,13 +253,13 @@ add_shortcode( 'wor_submit', function () {
 	}
 	$out .= '<fieldset><legend>Your mix</legend>';
 	$out .= wor_field( 'title', 'Title', 'required maxlength="120"' );
-	$out .= wor_field( 'audio', 'Download link for the audio file', 'required maxlength="500" placeholder="https://wetransfer.com/…"', 'WeTransfer, Dropbox, Google Drive or similar. WAV or MP3: 320 kbps is best, 256 is fine, 128 only if you have nothing better. At least 12 tracks or 30 minutes. Mixcloud allows no more than four tracks by one artist and three from one release. We upload it to the World on Rotation Mixcloud, credited to you. A playlist works too: put the tracks back to back in one file.', 'url' );
+	$out .= wor_field( 'audio', 'Mixcloud link or download link', 'required maxlength="500" placeholder="https://www.mixcloud.com/… or https://wetransfer.com/…"', 'Either the link to the mix on your own Mixcloud, or a download link for the audio file from WeTransfer, Dropbox, Google Drive or similar, and we upload it to the World on Rotation Mixcloud, credited to you. For files: WAV or MP3, 320 kbps is best, 256 is fine, 128 only if you have nothing better. At least 12 tracks or 30 minutes. Mixcloud allows no more than four tracks by one artist and three from one release. A playlist works too: put the tracks back to back in one file.', 'url' );
 	$out .= wor_field( 'tracklist', 'Tracklist', 'required maxlength="4000" rows="8" placeholder="Artist – Title&#10;Artist – Title"', 'One track per line, in order. Mixcloud uses it to pay the artists.', 'textarea' );
 	$out .= wor_field( 'place', 'The place it belongs to', 'required maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali.' );
 	$out .= wor_field( 'genres', 'Styles', 'maxlength="120"', 'Optional, separated by commas.' );
 	$out .= wor_field( 'desc', 'Description', 'required maxlength="750" rows="5"', 'A few lines on what it is and why. Up to 750 characters.', 'textarea' );
 	$out .= '</fieldset>';
-	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on its Mixcloud and on this site, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
+	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on this site, and on its own Mixcloud if I send the file, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
 	$out .= '<p><button class="btn primary" type="submit">Send it</button></p></form>';
 	return $out;
 } );
@@ -330,7 +330,7 @@ function wor_handle_submit() {
 		wor_submit_back( $token, 'Please fill in the title, the place and the description of your mix.' );
 	}
 	if ( ! preg_match( '#^https?://#', $audio ) ) {
-		wor_submit_back( $token, 'Please add a download link for the audio file, for example from WeTransfer, Dropbox or Google Drive.' );
+		wor_submit_back( $token, 'Please add the link to your mix on Mixcloud, or a download link for the audio file, for example from WeTransfer, Dropbox or Google Drive.' );
 	}
 	if ( '' === $tracks ) {
 		wor_submit_back( $token, 'Please add the tracklist.' );
@@ -403,7 +403,8 @@ function wor_handle_submit() {
 	if ( ! $mix_id || is_wp_error( $mix_id ) ) {
 		wor_submit_back( $token, 'Something went wrong saving your mix. Please try again.' );
 	}
-	update_post_meta( $mix_id, '_wor_audio', $audio );
+	$on_mc = (bool) preg_match( '#^https?://(www\.|m\.)?mixcloud\.com/#i', $audio );
+	update_post_meta( $mix_id, $on_mc ? '_wor_mixcloud' : '_wor_audio', $audio );
 	update_post_meta( $mix_id, '_wor_tracklist', $tracks );
 	update_post_meta( $mix_id, '_wor_selector', (string) $selector_id );
 	update_post_meta( $mix_id, '_wor_genres', $genres );
@@ -425,8 +426,10 @@ function wor_handle_submit() {
 
 	// Tell the editor.
 	$to   = get_option( 'wor_contact_email' ) ?: get_option( 'admin_email' );
-	$body = sprintf( "%s has sent a mix for World on Rotation.\n\nMix: %s\nAudio file: %s\n(Download it soon: transfer links expire.)\nPlace: %s%s\n\nUpload it to the World on Rotation Mixcloud, paste the Mixcloud link into the mix, then publish:\n%s\n",
-		get_the_title( $selector_id ), $title, $audio, $place, $place_id ? '' : ' (new place: add it under Places, then pick it on the mix)',
+	$body = sprintf( "%s has sent a mix for World on Rotation.\n\nMix: %s\n%s\nPlace: %s%s\n\n%s\n%s\n",
+		get_the_title( $selector_id ), $title,
+		$on_mc ? 'On their Mixcloud: ' . $audio : "Audio file: $audio\n(Download it soon: transfer links expire.)", $place, $place_id ? '' : ' (new place: add it under Places, then pick it on the mix)',
+		$on_mc ? 'Check it, then publish:' : 'Upload it to the World on Rotation Mixcloud, paste the Mixcloud link into the mix, then publish:',
 		admin_url( 'post.php?post=' . $mix_id . '&action=edit' ) );
 	if ( $new_sel ) {
 		$body .= sprintf( "\nThis is a new selector. Their profile is pending too (it is published automatically with the mix):\n%s\nEmail: %s\n", admin_url( 'post.php?post=' . $selector_id . '&action=edit' ), $email );

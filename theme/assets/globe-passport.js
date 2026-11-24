@@ -246,8 +246,8 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
           const overlayMat = (hex, op) => { const m = new mat.constructor({ color: hex, transparent: true, opacity: op, shininess: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); if(m.specular) m.specular.set("#000000"); return m; };
           // Countries keep their colour; only the open country changes
           window.setVisited = () => {};
-          // The open country: a passport-burgundy wash and outline
-          const hlMat = overlayMat(0x8c2333, 0.3), hlLine = new LineMat({ color: 0x6e1a28 }); let hlObjs = [], hlWant = null;
+          // The open country: lifted to near white, with a dark ink outline
+          const hlMat = overlayMat(0xfffdf6, 0.55), hlLine = new LineMat({ color: 0x1d2230 }); let hlObjs = [], hlWant = null;
           window.setHL = raw => {
             hlWant = raw; hlObjs.forEach(o => { world.scene().remove(o); o.geometry.dispose(); }); hlObjs = [];
             if(!raw || !LAND50) return;

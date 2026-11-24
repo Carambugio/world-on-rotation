@@ -255,7 +255,7 @@ add_shortcode( 'wor_submit', function () {
 	$out .= wor_field( 'title', 'Title', 'required maxlength="120"' );
 	$out .= wor_field( 'audio', 'Mixcloud link or download link', 'required maxlength="500" placeholder="https://www.mixcloud.com/… or https://wetransfer.com/…"', 'Either the link to the mix on your own Mixcloud, or a download link for the audio file from WeTransfer, Dropbox, Google Drive or similar, and we upload it to the World on Rotation Mixcloud, credited to you. For files: WAV or MP3, 320 kbps is best, 256 is fine, 128 only if you have nothing better. At least 12 tracks or 30 minutes. Mixcloud allows no more than four tracks by one artist and three from one release. A playlist works too: put the tracks back to back in one file.', 'url' );
 	$out .= wor_field( 'tracklist', 'Tracklist', 'required maxlength="4000" rows="8" placeholder="Artist – Title&#10;Artist – Title"', 'One track per line, in order. Mixcloud uses it to pay the artists.', 'textarea' );
-	$out .= wor_field( 'place', 'The place it belongs to', 'required maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali.' );
+	$out .= wor_field( 'place', 'The place it belongs to', 'maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali. If it has no single place, for example a style from all over the world, leave this empty and we pin it where you are based.' );
 	$out .= wor_field( 'genres', 'Tags', 'required maxlength="200" pattern="\s*[^,]+(\s*,\s*[^,]+){2,4}\s*,?\s*" title="Three to five tags, separated by commas" placeholder="highlife, Ghana, E.T. Mensah"', 'Three to five, separated by commas: styles and genres, the country, the main artists and so on.' );
 	$out .= wor_field( 'desc', 'Description', 'required maxlength="750" rows="5"', 'A few lines on what it is and why. Up to 750 characters.', 'textarea' );
 	$out .= '</fieldset>';
@@ -327,8 +327,8 @@ function wor_handle_submit() {
 	$desc   = $p( 'desc', 750 );
 	$tags   = array_slice( array_values( array_unique( array_filter( array_map( function ( $t ) { return trim( function_exists( 'mb_substr' ) ? mb_substr( trim( $t ), 0, 40 ) : substr( trim( $t ), 0, 40 ) ); }, explode( ',', $p( 'genres', 200 ) ) ) ) ) ), 0, 6 );
 	$genres = implode( ', ', $tags );
-	if ( '' === $title || '' === $place || '' === $desc ) {
-		wor_submit_back( $token, 'Please fill in the title, the place and the description of your mix.' );
+	if ( '' === $title || '' === $desc ) {
+		wor_submit_back( $token, 'Please fill in the title and the description of your mix.' );
 	}
 	if ( ! preg_match( '#^https?://#', $audio ) ) {
 		wor_submit_back( $token, 'Please add the link to your mix on Mixcloud, or a download link for the audio file, for example from WeTransfer, Dropbox or Google Drive.' );
@@ -397,6 +397,11 @@ function wor_handle_submit() {
 		}
 	}
 
+	// No place given: the mix goes where the selector is based.
+	$no_place = '' === $place;
+	if ( $no_place ) {
+		$place = $new_sel ? $base : (string) get_post_meta( $selector_id, '_wor_base', true );
+	}
 	$GLOBALS['wor_submitting'] = true;
 	$mix_id                    = wp_insert_post( array(
 		'post_type'    => 'wor_mix',
@@ -432,7 +437,7 @@ function wor_handle_submit() {
 	$to   = get_option( 'wor_contact_email' ) ?: get_option( 'admin_email' );
 	$body = sprintf( "%s has sent a mix for World on Rotation.\n\nMix: %s\n%s\nPlace: %s%s\n\n%s\n%s\n",
 		get_the_title( $selector_id ), $title,
-		$on_mc ? 'On their Mixcloud: ' . $audio : "Audio file: $audio\n(Download it soon: transfer links expire.)", $place, $place_id ? '' : ' (new place: add it under Places, then pick it on the mix)',
+		$on_mc ? 'On their Mixcloud: ' . $audio : "Audio file: $audio\n(Download it soon: transfer links expire.)", $place . ( $no_place ? ' (no place given, so where the selector is based)' : '' ), $place_id ? '' : ' (new place: add it under Places, then pick it on the mix)',
 		$on_mc ? 'Check it, then publish:' : 'Upload it to the World on Rotation Mixcloud, paste the Mixcloud link into the mix, then publish:',
 		admin_url( 'post.php?post=' . $mix_id . '&action=edit' ) );
 	if ( $new_sel ) {

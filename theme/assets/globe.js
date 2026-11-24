@@ -1025,15 +1025,15 @@ function drawRoute(a, b, mode, given){
     line = given || windingLine(a, b);
     const len = d3.geoLength({ type: "LineString", coordinates: line }) * 180 / Math.PI || 1;
     const lift = (pts, h) => { const x = pts.map(q => [q[0], q[1], h]); return x; };
-    if(mode === "train"){
-      const base = lift(line, 0.0045); base.color = "#1a140a"; base.stroke = 3.4;
-      const ties = lift(line, 0.005); ties.color = "#ffc76e"; ties.stroke = 1.6; ties.dash = 0.35 / len; ties.gap = 0.35 / len;
-      ROUTEPATHS = [base, ties];
-    } else {
-      const edge = lift(line, 0.0045); edge.color = "#1a140a"; edge.stroke = 4.6;
-      const road = lift(line, 0.005); road.color = "#ffd58f"; road.stroke = 2.8;
-      const mid = lift(line, 0.0055); mid.color = "#1a140a"; mid.stroke = 0.8; mid.dash = 0.25 / len; mid.gap = 0.25 / len;
-      ROUTEPATHS = [edge, road, mid];
+    if(mode === "train"){                                    // a map railway: a thin line crossed by sleepers
+      const halo = lift(line, 0.0045); halo.color = "rgba(20,14,6,0.6)"; halo.stroke = 5;
+      const ties = lift(line, 0.005); ties.color = "#f6ecd6"; ties.stroke = 6.5; ties.dash = 0.07 / len; ties.gap = 0.45 / len;
+      const rail = lift(line, 0.0052); rail.color = "#f6ecd6"; rail.stroke = 1.6;
+      ROUTEPATHS = [halo, ties, rail];
+    } else {                                                  // a map road: one solid line in stamp ink
+      const halo = lift(line, 0.0045); halo.color = "rgba(20,14,6,0.6)"; halo.stroke = 5;
+      const road = lift(line, 0.005); road.color = "#ffc76e"; road.stroke = 2.4;
+      ROUTEPATHS = [halo, road];
     }
     world.arcsData([]);
   } else world.arcsData([{ startLat: a.lat, startLng: a.lon, endLat: b.lat, endLng: b.lon, alt: mode === "plane" ? null : 0 }]);
@@ -1057,8 +1057,8 @@ function flyPlane(a, b){
   } else if(line){
     const cum = [0]; for(let i = 1; i < line.length; i++) cum.push(cum[i - 1] + d3.geoDistance(line[i - 1], line[i]));
     const tot = cum[cum.length - 1] || 1;
-    at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.008); };
-  } else at = k => { const q = ip(k); return v(q[0], q[1], 0.007); };
+    at = k => { const target = k * tot; let i = d3.bisectLeft(cum, target); i = Math.max(1, Math.min(line.length - 1, i)); const f = (target - cum[i - 1]) / ((cum[i] - cum[i - 1]) || 1), q = d3.geoInterpolate(line[i - 1], line[i])(Math.max(0, Math.min(1, f))); return v(q[0], q[1], 0.0052); };
+  } else at = k => { const q = ip(k); return v(q[0], q[1], 0.002); };
   const slow = mode === "plane" ? 1 : mode === "boat" ? 1.35 : 1.5;
   FLIGHT = { at, t0: performance.now(), dur: Math.min(14000, (5200 + D * 3200) * slow), to: b, mode };
 }

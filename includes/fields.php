@@ -25,7 +25,7 @@ function wor_fields( $post_type ) {
 			'qa'        => array( 'Q&A', 'paras', 'Shown on the mix page. Each question on its own line with the answer on the next, and an empty line between pairs.' ),
 			'minutes'   => array( 'Duration (minutes)', 'number', '' ),
 			'tracks'    => array( 'Number of tracks', 'number', '' ),
-			'genres'    => array( 'Genres', 'text', 'Separate with commas, for example: Highlife, Juju' ),
+			'genres'    => array( 'Tags', 'text', 'Three to five, separated by commas: styles, the country, main artists. For example: highlife, Ghana, E.T. Mensah. Mixcloud takes up to five tags too.' ),
 			'added'     => array( 'Date added', 'date', 'Shown on the stamp. Leave empty to use today.' ),
 		),
 		'wor_selector' => array(

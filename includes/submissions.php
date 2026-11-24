@@ -256,7 +256,7 @@ add_shortcode( 'wor_submit', function () {
 	$out .= wor_field( 'audio', 'Mixcloud link or download link', 'required maxlength="500" placeholder="https://www.mixcloud.com/… or https://wetransfer.com/…"', 'Either the link to the mix on your own Mixcloud, or a download link for the audio file from WeTransfer, Dropbox, Google Drive or similar, and we upload it to the World on Rotation Mixcloud, credited to you. For files: WAV or MP3, 320 kbps is best, 256 is fine, 128 only if you have nothing better. At least 12 tracks or 30 minutes. Mixcloud allows no more than four tracks by one artist and three from one release. A playlist works too: put the tracks back to back in one file.', 'url' );
 	$out .= wor_field( 'tracklist', 'Tracklist', 'required maxlength="4000" rows="8" placeholder="Artist – Title&#10;Artist – Title"', 'One track per line, in order. Mixcloud uses it to pay the artists.', 'textarea' );
 	$out .= wor_field( 'place', 'The place it belongs to', 'required maxlength="80"', 'Where the music comes from, which is not always where you live: a city, town, region or country. For example: Ségou, Mali.' );
-	$out .= wor_field( 'genres', 'Styles', 'maxlength="120"', 'Optional, separated by commas.' );
+	$out .= wor_field( 'genres', 'Tags', 'required maxlength="200" pattern="\s*[^,]+(\s*,\s*[^,]+){2,4}\s*,?\s*" title="Three to five tags, separated by commas" placeholder="highlife, Ghana, E.T. Mensah"', 'Three to five, separated by commas: styles and genres, the country, the main artists and so on.' );
 	$out .= wor_field( 'desc', 'Description', 'required maxlength="750" rows="5"', 'A few lines on what it is and why. Up to 750 characters.', 'textarea' );
 	$out .= '</fieldset>';
 	$out .= '<p class="wf check"><label><input type="checkbox" name="consent" value="1" required><span>I made this mix and have the right to share it and the photo. I agree that World on Rotation can publish the mix on this site, and on its own Mixcloud if I send the file, credited to me, and keep my details as described in the <a href="' . esc_url( home_url( '/privacy-policy/' ) ) . '" target="_blank">privacy policy</a>.</span></label></p>';
@@ -325,12 +325,16 @@ function wor_handle_submit() {
 	$tracks = $p( 'tracklist', 4000 );
 	$place  = $p( 'place', 80 );
 	$desc   = $p( 'desc', 750 );
-	$genres = $p( 'genres', 120 );
+	$tags   = array_slice( array_values( array_unique( array_filter( array_map( function ( $t ) { return trim( function_exists( 'mb_substr' ) ? mb_substr( trim( $t ), 0, 40 ) : substr( trim( $t ), 0, 40 ) ); }, explode( ',', $p( 'genres', 200 ) ) ) ) ) ), 0, 6 );
+	$genres = implode( ', ', $tags );
 	if ( '' === $title || '' === $place || '' === $desc ) {
 		wor_submit_back( $token, 'Please fill in the title, the place and the description of your mix.' );
 	}
 	if ( ! preg_match( '#^https?://#', $audio ) ) {
 		wor_submit_back( $token, 'Please add the link to your mix on Mixcloud, or a download link for the audio file, for example from WeTransfer, Dropbox or Google Drive.' );
+	}
+	if ( count( $tags ) < 3 || count( $tags ) > 5 ) {
+		wor_submit_back( $token, 'Please add three to five tags, separated by commas.' );
 	}
 	if ( '' === $tracks ) {
 		wor_submit_back( $token, 'Please add the tracklist.' );

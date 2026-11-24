@@ -1067,10 +1067,11 @@ function planRoute(a, b){
     else if(byBus(a, b) && lp.km < 2200) res = { mode: "bus", line: lp.line };
   }
   if(!res){
-    const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)); let sea = 0;
-    for(let k = 1; k < n; k++){ const q = ip(k / n); if(!isLand(q[0], q[1])) sea++; }
-    // Ships for routes that are mostly sea between two coastal cities, oceans included (Lagos to Salvador)
-    res = { mode: sea / (n - 1) > 0.6 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
+    // Ships only where a ship would really sail: two coastal cities, open sea all the way between them (a few islands at most),
+    // and no further than an ocean crossing like Lagos to Salvador. Anything else flies.
+    const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), n = Math.max(30, Math.ceil(D * 180 / Math.PI / 0.25)), edge = 150 / straight; let land = 0, cnt = 0;
+    for(let k = 1; k < n; k++){ const t = k / n; if(t < edge || t > 1 - edge) continue; const q = ip(t); cnt++; if(isLand(q[0], q[1])) land++; }
+    res = { mode: straight < 6500 && cnt > 0 && land / cnt < 0.04 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
   }
   // follow the real railway or main road when the data has one
   if(res.mode === "train" || res.mode === "bus"){ if(!NETLOAD) loadNets(); const real = netPath(res.mode === "train" ? "rail" : "road", a, b); if(real) res.line = smoothLine(real.line); }

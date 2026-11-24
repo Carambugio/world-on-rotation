@@ -974,6 +974,7 @@ new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerr
   const g = cv.getContext("2d"); g.drawImage(im, 0, 0);
   try { const d = g.getImageData(0, 0, im.width, im.height).data, a = new Uint8Array(im.width * im.height); for(let k = 0; k < a.length; k++) a[k] = d[k * 4] > 127 ? 1 : 0; LANDMASK = { w: im.width, h: im.height, a }; } catch(e){}
   if(MASKWAIT){ const w = MASKWAIT; MASKWAIT = null; if(activeCity === w.to) flyPlane(w.from, w.to); }
+  setTimeout(loadNets, 1500);
 }).catch(() => {});
 function isLand(lon, lat){ const M = LANDMASK; if(!M) return true; const x = Math.min(M.w - 1, Math.max(0, ((lon + 180) / 360 * M.w) | 0)), y = Math.min(M.h - 1, Math.max(0, ((90 - lat) / 180 * M.h) | 0)); return M.a[y * M.w + x] === 1; }
 /* Real connections (checked November 2026). Trains only where passenger trains run, across borders only where an
@@ -1071,9 +1072,60 @@ function planRoute(a, b){
     // Ships for routes that are mostly sea between two coastal cities, oceans included (Lagos to Salvador)
     res = { mode: sea / (n - 1) > 0.6 && coastal(a) && coastal(b) ? "boat" : "plane", line: null };
   }
+  // follow the real railway or main road when the data has one
+  if(res.mode === "train" || res.mode === "bus"){ if(!NETLOAD) loadNets(); const real = netPath(res.mode === "train" ? "rail" : "road", a, b); if(real) res.line = real.line; }
   PLANS.set(key, res); return res;
 }
 function routeMode(a, b){ return planRoute(a, b).mode; }
+// Real railways and main roads (Natural Earth, public domain): loaded once after the globe, then used to trace train and bus routes
+const NETS = { rail: null, road: null }; let NETLOAD = null;
+function loadNets(){
+  if(NETLOAD) return NETLOAD;
+  const get = k => fetch(WOR.img + "net-" + k + ".json" + IMGV).then(r => r.json()).then(d => {
+    const N = d.n.length / 2, adj = Array.from({ length: N }, () => []);
+    d.e.forEach((e, i) => { adj[e[0]].push(i); adj[e[1]].push(i); });
+    NETS[k] = { n: d.n, e: d.e, adj, N };
+  }).catch(() => {});
+  NETLOAD = Promise.all([get("rail"), get("road")]).then(() => {
+    PLANS.clear();
+    if(ROUTE && ROUTE.to && activeCity === ROUTE.to && (ROUTE.mode === "train" || ROUTE.mode === "bus")) flyPlane(ROUTE.from, ROUTE.to);
+  });
+  return NETLOAD;
+}
+function netPath(kind, a, b){
+  const G = NETS[kind]; if(!G) return null;
+  const n = G.n, rad = Math.PI / 180, km = (x0, y0, x1, y1) => d3.geoDistance([x0, y0], [x1, y1]) * 6371;
+  const near = c => {
+    let best = Infinity, bi = -1; const cl = Math.cos(c.lat * rad);
+    for(let i = 0; i < G.N; i++){ if(!G.adj[i].length) continue; const dx = (n[2 * i] / 100 - c.lon) * cl, dy = n[2 * i + 1] / 100 - c.lat, d = dx * dx + dy * dy; if(d < best){ best = d; bi = i; } }
+    return bi < 0 ? null : { i: bi, km: km(c.lon, c.lat, n[2 * bi] / 100, n[2 * bi + 1] / 100) };
+  };
+  const A = near(a), B = near(b), lim = kind === "rail" ? 120 : 150;
+  if(!A || !B || A.km > lim || B.km > lim || A.i === B.i) return null;
+  const dist = new Float64Array(G.N).fill(Infinity), via = new Int32Array(G.N).fill(-1), heap = [];
+  const push = (d, i) => { heap.push([d, i]); let k = heap.length - 1; while(k){ const p = (k - 1) >> 1; if(heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if(heap.length){ heap[0] = last; let k = 0; for(;;){ const l = 2 * k + 1, r = l + 1; let m = k; if(l < heap.length && heap[l][0] < heap[m][0]) m = l; if(r < heap.length && heap[r][0] < heap[m][0]) m = r; if(m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m; } } return top; };
+  dist[A.i] = 0; push(0, A.i);
+  while(heap.length){
+    const [d, u] = pop(); if(u === B.i) break; if(d > dist[u]) continue;
+    for(const ei of G.adj[u]){ const e = G.e[ei], v = e[0] === u ? e[1] : e[0], nd = d + e[2]; if(nd < dist[v]){ dist[v] = nd; via[v] = ei; push(nd, v); } }
+  }
+  if(!isFinite(dist[B.i])) return null;
+  const total = dist[B.i] / 10 + A.km + B.km, straight = km(a.lon, a.lat, b.lon, b.lat);
+  if(total > straight * 2.2 + 300) return null;
+  const P = i => [n[2 * i] / 100, n[2 * i + 1] / 100], seq = [];
+  for(let u = B.i; u !== A.i; ){ const ei = via[u], e = G.e[ei]; seq.push([ei, u]); u = e[0] === u ? e[1] : e[0]; }
+  seq.reverse();
+  const pts = [[a.lon, a.lat], P(A.i)];
+  for(const [ei, end] of seq){
+    const e = G.e[ei], r = e[3] || [], x0 = n[2 * e[0]], y0 = n[2 * e[0] + 1], inner = [];
+    for(let k = 0; k < r.length; k += 2) inner.push([(x0 + r[k]) / 100, (y0 + r[k + 1]) / 100]);
+    if(end === e[0]) inner.reverse();
+    inner.forEach(q => pts.push(q)); pts.push(P(end));
+  }
+  pts.push([b.lon, b.lat]);
+  return { line: pts, km: total };
+}
 // A road or railway winds a little, the way real ones do; the same line every time for the same two places
 function windingLine(a, b){
   const D = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 180 / Math.PI, ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]);

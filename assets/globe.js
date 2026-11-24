@@ -1080,9 +1080,11 @@ function flyPlane(a, b){
   const s1 = world.getScreenCoords(A[0], A[1], A[2]), s2 = world.getScreenCoords(B[0], B[1], B[2]);
   let ang = Math.atan2(s2.y - s1.y, s2.x - s1.x) * 180 / Math.PI, flip = 1;
   if(FLIGHT.mode === "plane") ang += 45;                      // the plane emoji points up and to the right
-  else {                                                       // seen from the side: faces left or right and stays level on the ground
-    if(Math.abs(ang) > 90) flip = -1;
-    ang = 0;
+  else {                                                       // seen from the side: the body lies along the line and turns with it, never upside down
+    const u = FLIGHT.at(Math.max(0, e - 0.006)), w = FLIGHT.at(Math.min(1, e + 0.006)), U = lla(u), V = lla(w);
+    const a1 = world.getScreenCoords(U[0], U[1], U[2]), a2 = world.getScreenCoords(V[0], V[1], V[2]);
+    ang = Math.atan2(a2.y - a1.y, a2.x - a1.x) * 180 / Math.PI;
+    if(Math.abs(ang) > 90){ flip = -1; ang = ang > 0 ? ang - 180 : ang + 180; }
   }
   const sc = FLIGHT.mode === "plane" ? 0.85 + Math.min(0.5, A[2] * 2.2) : 1;
   PLANE.hidden = behind;

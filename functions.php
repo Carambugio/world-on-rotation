@@ -30,6 +30,7 @@ function wort_assets() {
 	}
 	wp_enqueue_style( 'wort-fonts', wort_fonts_url(), array(), null );
 	wp_enqueue_style( 'wort-site', get_template_directory_uri() . '/assets/site.css', array( 'wort-fonts' ), WORT_VERSION );
+	wp_enqueue_script( 'wort-stamps', get_template_directory_uri() . '/assets/stamps.js', array(), WORT_VERSION, true );
 }
 add_action( 'wp_enqueue_scripts', 'wort_assets' );
 

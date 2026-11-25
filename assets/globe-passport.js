@@ -84,7 +84,7 @@ const CITY_LABELS = CITIES.filter(c => !c.whole).map(c => ({kind:"city", c, lat:
 function fitBox(d){
   const f = d.c && d.c.feat; if(!f) return {hw: 0.6};
   const cl = Math.max(0.2, Math.cos(d.lat * Math.PI / 180)), inside = hw => {
-    const hh = hw * cl * 0.56;
+    const hh = hw * cl * (d.aspect || 0.56);
     for(let i = 0; i <= 6; i++){ const t = -1 + i / 3;
       if(!d3.geoContains(f, [d.lng + t*hw, d.lat + hh]) || !d3.geoContains(f, [d.lng + t*hw, d.lat - hh]) ||
          !d3.geoContains(f, [d.lng + hw, d.lat + t*hh]) || !d3.geoContains(f, [d.lng - hw, d.lat + t*hh])) return false; }
@@ -111,12 +111,21 @@ function labelEl(d){
     d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
     const n = d.whole.items.length;
     // the stamp is sized to fit inside its own country (see tidyLabels); when the country is too small on screen, the plain name shows instead
-    const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 6 ? ` textLength="72" lengthAdjust="spacingAndGlyphs"` : "";
-    s.innerHTML = `<svg viewBox="0 0 100 56" width="50" height="28" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
+    const label = `${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}`, small = `${n} MIX${n > 1 ? "ES" : ""}`;
+    const real = window.WORSTAMP && WORSTAMP.draw(d.whole.country, {id: "gl" + hash(d.whole.city), city: d.whole.city, code: d.whole.code, whole: true, name: d.whole.city, small}, true);
+    if(real){
+      // the country's own entry stamp, after the real ones: shape, ink, lettering
+      el.classList.add("real"); d.nat = 56; d.aspect = real.h / real.w;
+      s.innerHTML = `<svg viewBox="0 0 ${real.w} ${real.h}" width="56" height="${(56 * real.h / real.w).toFixed(1)}" aria-label="${label}">${real.body}</svg><em>${esc(d.text)}</em>`;
+    } else {
+      d.nat = 50; d.aspect = 0.56;
+      const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 6 ? ` textLength="72" lengthAdjust="spacingAndGlyphs"` : "";
+      s.innerHTML = `<svg viewBox="0 0 100 56" width="50" height="28" aria-label="${label}">
       <path class="paper" d="M8 2H92L98 8V48L92 54H8L2 48V8Z"/>
       <g fill="none" stroke="${ink}"><path d="M8 2H92L98 8V48L92 54H8L2 48V8Z" stroke-width="3.4"/><path d="M10 7H90L93 10V46L90 49H10L7 46V10Z" stroke-width="1"/></g>
       <text x="50" y="31" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="20" letter-spacing="1"${fit} fill="${ink}">${nm}</text>
-      <text x="50" y="45" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="12" letter-spacing=".2" fill="${ink}">${n} MIX${n > 1 ? "ES" : ""}</text></svg><em>${esc(d.text)}</em>`;
+      <text x="50" y="45" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="12" letter-spacing=".2" fill="${ink}">${small}</text></svg><em>${esc(d.text)}</em>`;
+    }
     if(hasStamp(d.whole.city)) el.classList.add("got");
   }
   let down = null;
@@ -397,7 +406,7 @@ function tidyLabels(){
         if(d.whole){
           if(!d.fit) d.fit = fitBox(d);
           const L = world.getScreenCoords(d.lat, d.lng - d.fit.hw, 0.006), R = world.getScreenCoords(d.lat, d.lng + d.fit.hw, 0.006);
-          const k = Math.min(1.1, Math.hypot(R.x - L.x, R.y - L.y) / 50), mini = k < 0.72 && d.whole !== activeCity, kk = mini ? 1 : Math.max(0.72, k);
+          const k = Math.min(1, Math.hypot(R.x - L.x, R.y - L.y) / (d.nat || 50)), mini = k < 0.72 && d.whole !== activeCity, kk = mini ? 1 : Math.max(0.72, k);
           if(d.mini !== mini){ d.mini = mini; d.el.classList.toggle("mini", mini); s.style.transform = ""; d.k = null; d.w = s.offsetWidth; d.h = s.offsetHeight; }
           if(!mini && (d.k == null || Math.abs(d.k - kk) > 0.02)){ d.k = kk; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${kk.toFixed(2)})`; }
           if(!mini){
@@ -641,6 +650,10 @@ function stamp(p, size=104){
   const uid = "s" + hash(p.id + size), city = esc(plain(p.city).toUpperCase());
   const who = p.by && COMPILERS[p.by] ? esc(plain(COMPILERS[p.by].name).toUpperCase()) : (p.who ? esc(p.who) : "RHYTHM PASSPORT");
   const M = `font-family="IBM Plex Mono,ui-monospace,monospace"`, B = `font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="600"`;
+  const real = window.WORSTAMP && WORSTAMP.draw(p.country, {id: uid, city: p.city, code: p.code, whole: p.whole, added: p.added});
+  if(real) return `<svg class="stamp" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">
+    <rect width="100" height="100" rx="9" fill="#efe7d5"/>
+    <g transform="rotate(${rot} 50 50) translate(${(100 - real.w*0.92)/2} ${(100 - real.h*0.92)/2}) scale(.92)" filter="url(#rp-ink)" opacity=".9">${real.body}</g></svg>`;
   let body;
   if(p.whole) body = countryStampBody(col, p.city, "ENTRY · " + iso3(p.country || p.city), date);
   else if(v === 0) body = `

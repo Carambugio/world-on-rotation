@@ -96,6 +96,7 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js"></script>
 <script src="<?php echo esc_url( $wort_uri . '/assets/geo.js?ver=' . $wort_ver ); ?>"></script>
 <script>window.WOR = <?php echo wp_json_encode( $wort_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); ?>;</script>
+<script src="<?php echo esc_url( $wort_uri . '/assets/stamps.js?ver=' . $wort_ver ); ?>"></script>
 <script src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
 <?php if ( ! $wort_design ) : ?>
 <a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Earlier design · back to the new one</a>

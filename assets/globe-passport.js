@@ -80,6 +80,19 @@ const COUNTRY_LABELS = LABEL_PTS.map(p => {
   return {kind:"country", c, whole, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
 }).sort((x, y) => y.a - x.a);
 const CITY_LABELS = CITIES.filter(c => !c.whole).map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
+/* The biggest stamp-shaped box (in degrees) around the label point that stays inside the country */
+function fitBox(d){
+  const f = d.c && d.c.feat; if(!f) return {hw: 0.6};
+  const cl = Math.max(0.2, Math.cos(d.lat * Math.PI / 180)), inside = hw => {
+    const hh = hw * cl * 0.56;
+    for(let i = 0; i <= 6; i++){ const t = -1 + i / 3;
+      if(!d3.geoContains(f, [d.lng + t*hw, d.lat + hh]) || !d3.geoContains(f, [d.lng + t*hw, d.lat - hh]) ||
+         !d3.geoContains(f, [d.lng + hw, d.lat + t*hh]) || !d3.geoContains(f, [d.lng - hw, d.lat + t*hh])) return false; }
+    return true;
+  };
+  let lo = 0, hi = 25; for(let i = 0; i < 14; i++){ const m = (lo + hi) / 2; if(inside(m)) lo = m; else hi = m; }
+  return {hw: Math.max(lo, 0.3)};
+}
 function hasStamp(city){ try { return !!MYPASS[city]; } catch(e){ return false; } }
 function labelEl(d){
   if(d.el) return d.el;
@@ -97,13 +110,13 @@ function labelEl(d){
     el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
     d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
     const n = d.whole.items.length;
-    // compact on the globe: a little bigger than a town stamp, no more
+    // the stamp is sized to fit inside its own country (see tidyLabels); when the country is too small on screen, the plain name shows instead
     const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 6 ? ` textLength="72" lengthAdjust="spacingAndGlyphs"` : "";
     s.innerHTML = `<svg viewBox="0 0 100 56" width="50" height="28" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
       <path class="paper" d="M8 2H92L98 8V48L92 54H8L2 48V8Z"/>
       <g fill="none" stroke="${ink}"><path d="M8 2H92L98 8V48L92 54H8L2 48V8Z" stroke-width="3.4"/><path d="M10 7H90L93 10V46L90 49H10L7 46V10Z" stroke-width="1"/></g>
       <text x="50" y="31" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="20" letter-spacing="1"${fit} fill="${ink}">${nm}</text>
-      <text x="50" y="45" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="12" letter-spacing=".2" fill="${ink}">${n} MIX${n > 1 ? "ES" : ""}</text></svg>`;
+      <text x="50" y="45" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="12" letter-spacing=".2" fill="${ink}">${n} MIX${n > 1 ? "ES" : ""}</text></svg><em>${esc(d.text)}</em>`;
     if(hasStamp(d.whole.city)) el.classList.add("got");
   }
   let down = null;
@@ -362,8 +375,8 @@ function overlaps(b, list){ for(const o of list){ if(b[0] < o[2] && b[2] > o[0] 
 function tidyLabels(){
   const data = world.htmlElementsData(); if(!data || !data.length) return;
   const pov = world.pointOfView(), centre = [pov.lng, pov.lat], placed = [], horizon = Math.acos(1/(1 + pov.altitude)) - 0.1;
-  const rank = x => x.kind === "city" || x.whole ? 1e9 + ((x.whole || x.c) === activeCity ? 1e6 : 0) + (x.whole || x.c).items.length : x.a;
-  const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [];
+  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.whole ? 1e8 + (x.whole === activeCity ? 1e6 : 0) + x.a : x.a;
+  const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [], stamps = [];
   for(const d of order){
     const s = d.el && d.el.firstChild; if(!s) continue;
     let show = d3.geoDistance([d.lng, d.lat], centre) < horizon;
@@ -379,12 +392,24 @@ function tidyLabels(){
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
-        /* A whole-country stamp eases down a little as you zoom out, but always stays bigger than a town's */
-        const k = d.whole ? Math.max(0.85, Math.min(1, 1.05 - (pov.altitude - 0.6) * 0.15)) : 1;
-        if(d.whole && d.k !== k){ d.k = k; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${k.toFixed(2)})`; }
-        for(const o of d.whole ? [0] : [0, -1.25, 1.25, -2.5, 2.5]){
-          const dy = o*d.h, b = [x - d.w*k/2, y - d.h*k/2 + dy, x + d.w*k/2, y + d.h*k/2 + dy];
-          if(d.whole || !overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }   // a whole-country stamp never moves off its country
+        /* A whole-country stamp is printed inside its own country: it grows and shrinks with the country on screen,
+           never past 55px, and below a legible size it turns back into the plain country name */
+        if(d.whole){
+          if(!d.fit) d.fit = fitBox(d);
+          const L = world.getScreenCoords(d.lat, d.lng - d.fit.hw, 0.006), R = world.getScreenCoords(d.lat, d.lng + d.fit.hw, 0.006);
+          const k = Math.min(1.1, Math.hypot(R.x - L.x, R.y - L.y) / 50), mini = k < 0.72 && d.whole !== activeCity, kk = mini ? 1 : Math.max(0.72, k);
+          if(d.mini !== mini){ d.mini = mini; d.el.classList.toggle("mini", mini); s.style.transform = ""; d.k = null; d.w = s.offsetWidth; d.h = s.offsetHeight; }
+          if(!mini && (d.k == null || Math.abs(d.k - kk) > 0.02)){ d.k = kk; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${kk.toFixed(2)})`; }
+          if(!mini){
+            const b = [x - d.w*kk/2, y - d.h*kk/2, x + d.w*kk/2, y + d.h*kk/2];
+            if(!overlaps(b, stamps) || d.whole === activeCity){ stamps.push(b); placed.push(b); s.style.top = "0px"; show = true; }
+            s.style.visibility = show ? "visible" : "hidden"; continue;
+          }
+          if(mini && !s.style.transform) s.style.transform = "translate(-50%,-50%)";
+        }
+        for(const o of [0, -1.25, 1.25, -2.5, 2.5]){
+          const dy = o*d.h, b = [x - d.w/2, y - d.h/2 + dy, x + d.w/2, y + d.h/2 + dy];
+          if(!overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }
         }
       }
     }

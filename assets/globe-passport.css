@@ -499,12 +499,16 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city.grp .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))!important}
 .glabel.city.grp .pm .o{stroke-width:2.2}
 
-/* A mix for a whole country: the country name is drawn as an entry stamp, bigger than any town's */
+/* A mix for a whole country: an entry stamp printed inside the country, sized to fit it */
 /* the renderer stacks labels by depth; town stamps always sit above a country stamp */
 .glabel.country.whole{pointer-events:auto;cursor:pointer;z-index:1!important}
 .glabel.city{z-index:3!important}
-.glabel.country.whole span{display:block;padding:0;line-height:0;letter-spacing:0;text-shadow:none!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.glabel.country.whole:not(.mini) span{display:block;padding:0;line-height:0;letter-spacing:0;text-shadow:none!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
 .glabel.country.whole svg{display:block;overflow:visible}
 .glabel.country.whole .paper{fill:rgba(246,239,226,.9)}
 .glabel.country.whole.got .paper{fill:color-mix(in srgb,var(--ink) 14%,#f6efe2)}
-.glabel.country.whole span:hover{filter:drop-shadow(0 2px 5px rgba(0,0,0,.55))}
+.glabel.country.whole:not(.mini) span:hover{filter:drop-shadow(0 2px 5px rgba(0,0,0,.55))}
+.glabel.country.whole em{display:none}
+/* too small on screen: back to the plain country name, still tappable */
+.glabel.country.whole.mini svg{display:none}
+.glabel.country.whole.mini em{display:inline;font-style:normal}

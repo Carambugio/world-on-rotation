@@ -88,12 +88,18 @@ function wort_stamp( $sid, $city, $code, $added, $size, $who = 'RHYTHM PASSPORT'
 function wort_pstamp( $p, $size ) {
 	$d   = wor_data();
 	$who = isset( $d['C'][ $p['by'] ] ) ? wort_plain_upper( $d['C'][ $p['by'] ]['name'] ) : 'RHYTHM PASSPORT';
-	return wort_stamp( $p['id'], $p['city'], $p['code'], $p['added'], $size, $who, ! empty( $p['whole'] ) );
+	return wort_stamp_tag( wort_stamp( $p['id'], $p['city'], $p['code'], $p['added'], $size, $who, ! empty( $p['whole'] ) ), $p['id'], $p, $p['added'] );
+}
+
+/** Tag a stamp with its country, so assets/stamps.js can redraw it after that country's real entry stamp. */
+function wort_stamp_tag( $svg, $id, $c, $added ) {
+	$attr = sprintf( ' data-id="%s" data-country="%s" data-city="%s" data-code="%s" data-added="%s"%s', esc_attr( $id ), esc_attr( $c['country'] ?? '' ), esc_attr( $c['city'] ), esc_attr( $c['code'] ?? '' ), esc_attr( $added ), empty( $c['whole'] ) ? '' : ' data-whole="1"' );
+	return preg_replace( '/^<svg class="stamp"/', '<svg class="stamp"' . $attr, $svg, 1 );
 }
 
 function wort_place_stamp( $c, $size ) {
 	$added = $c['items'] ? end( $c['items'] )['added'] : $c['date'];
-	return wort_stamp( 'city-' . $c['city'], $c['city'], $c['code'], $added, $size, 'RHYTHM PASSPORT', ! empty( $c['whole'] ) );
+	return wort_stamp_tag( wort_stamp( 'city-' . $c['city'], $c['city'], $c['code'], $added, $size, 'RHYTHM PASSPORT', ! empty( $c['whole'] ) ), 'city-' . $c['city'], $c, $added );
 }
 
 function wort_dur( $s ) {

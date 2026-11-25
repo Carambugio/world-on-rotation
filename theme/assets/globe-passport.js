@@ -49,7 +49,7 @@ const COUNTRY = LO.map((f,i) => {
 const countryByName = new Map(COUNTRY.map(c=>[c.name,c]));
 
 const CITIES = d3.groups(PLAYLISTS, p=>p.city).map(([city, items]) => {
-  const c = {city, items, lat:items[0].lat, lon:items[0].lon, country:items[0].country, tz:items[0].tz, code:items[0].code};
+  const c = {city, items, lat:items[0].lat, lon:items[0].lon, country:items[0].country, tz:items[0].tz, code:items[0].code, whole:!!items[0].whole};
   c.ci = countryByName.get(c.country) || COUNTRY.find(k => d3.geoContains(k.feat, [c.lon, c.lat])) || null;
   return c;
 });
@@ -75,9 +75,11 @@ for(const f of LO){ const polys = f.g.type === "Polygon" ? [f.g.coordinates] : f
 /* Every country and territory gets a name; smaller ones appear as you zoom in */
 const COUNTRY_LABELS = LABEL_PTS.map(p => {
   const name = nice(p.n), c = COUNTRY.find(k => k.raw === p.n) || {name, raw:p.n, lat:p.lat, lon:p.lon, main:p.a, code:code3(name), feat:null};
-  return {kind:"country", c, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
+  // a mix for the whole country: the country name itself becomes the stamp
+  const whole = CITIES.find(x => x.whole && x.ci && x.ci.raw === p.n) || null;
+  return {kind:"country", c, whole, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
 }).sort((x, y) => y.a - x.a);
-const CITY_LABELS = CITIES.map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
+const CITY_LABELS = CITIES.filter(c => !c.whole).map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
 function hasStamp(city){ try { return !!MYPASS[city]; } catch(e){ return false; } }
 function labelEl(d){
   if(d.el) return d.el;
@@ -91,6 +93,12 @@ function labelEl(d){
     s.insertAdjacentHTML("beforeend", '<b class="cnt"></b>');
   }
   if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
+  if(d.kind === "country" && d.whole){
+    el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
+    d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
+    s.insertAdjacentHTML("beforeend", `<i>${d.whole.items.length > 1 ? d.whole.items.length + " mixes" : "1 mix"}</i>`);
+    if(hasStamp(d.whole.city)) el.classList.add("got");
+  }
   let down = null;
   s.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
   s.addEventListener("click", e => { e.stopPropagation(); labelClickAt = performance.now();
@@ -99,7 +107,7 @@ function labelEl(d){
       const ms = d.members, lat = d3.mean(ms, m => m.c.lat), lng = d3.mean(ms, m => m.c.lon);
       world.pointOfView({ lat, lng, altitude: Math.max(0.12, world.pointOfView().altitude * 0.45) }, 900); return;
     }
-    d.kind === "city" ? openCity(d.c.city) : openCountry(d.c); });
+    d.kind === "city" ? openCity(d.c.city) : d.whole ? openCity(d.whole.city) : openCountry(d.c); });
   for(const t of ["pointerup", "mouseup"]) s.addEventListener(t, e => { labelClickAt = performance.now(); });
   el.appendChild(s); d.el = el; return el;
 }
@@ -312,7 +320,7 @@ function refreshLabels(){
   const alt = world.pointOfView().altitude, key = Math.round(Math.log2(alt)*5);
   if(key === labelKey) return; labelKey = key;
   const minA = 0.0022*alt*alt; // country names show from about 300,000 km² at the opening view
-  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA), ...CITY_LABELS]);
+  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA || l.whole), ...CITY_LABELS]);
   const f = Math.max(0.1, Math.min(1, alt/1.85));
   world.pointRadius(d => (0.2 + 0.09*Math.sqrt(d.items.length))*f);
   world.ringMaxRadius(d => (1.1 + 0.35*Math.sqrt(d.items.length))*f);
@@ -347,7 +355,7 @@ function overlaps(b, list){ for(const o of list){ if(b[0] < o[2] && b[2] > o[0] 
 function tidyLabels(){
   const data = world.htmlElementsData(); if(!data || !data.length) return;
   const pov = world.pointOfView(), centre = [pov.lng, pov.lat], placed = [], horizon = Math.acos(1/(1 + pov.altitude)) - 0.1;
-  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.a;
+  const rank = x => x.kind === "city" || x.whole ? 1e9 + ((x.whole || x.c) === activeCity ? 1e6 : 0) + (x.whole || x.c).items.length : x.a;
   const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [];
   for(const d of order){
     const s = d.el && d.el.firstChild; if(!s) continue;
@@ -364,9 +372,12 @@ function tidyLabels(){
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
-        for(const o of [0, -1.25, 1.25, -2.5, 2.5]){
-          const dy = o*d.h, b = [x - d.w/2, y - d.h/2 + dy, x + d.w/2, y + d.h/2 + dy];
-          if(!overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }
+        /* A whole-country stamp shrinks as you zoom out, so it stays inside its country and off its neighbours' stamps */
+        const k = d.whole ? Math.max(0.5, Math.min(1, 1 - (pov.altitude - 0.9) * 0.6)) : 1;
+        if(d.whole && d.k !== k){ d.k = k; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${k.toFixed(2)})`; }
+        for(const o of d.whole ? [0] : [0, -1.25, 1.25, -2.5, 2.5]){
+          const dy = o*d.h, b = [x - d.w*k/2, y - d.h*k/2 + dy, x + d.w*k/2, y + d.h*k/2 + dy];
+          if(d.whole || !overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }   // a whole-country stamp never moves off its country
         }
       }
     }

@@ -43,6 +43,7 @@ function wor_fields( $post_type ) {
 			'lon'     => array( 'Longitude', 'text', 'Decimal, for example -0.13 (west is negative)' ),
 			'tz'      => array( 'Time zone', 'text', 'For the local clock, for example Europe/London or Africa/Lagos' ),
 			'code'    => array( 'Stamp code', 'text', 'Three letters on the passport stamp. Leave empty to use the first three letters of the name.' ),
+			'whole'   => array( 'Whole country', 'checkbox', 'Tick when the mixes here belong to the whole country rather than one town, for example highlife from Ghana. The country name becomes the stamp, with no pin of its own. Name the place after the country and put its middle in Latitude and Longitude.' ),
 			'born'    => array( 'Born here', 'lines', 'One artist per line: Name | link' ),
 			'adopted' => array( 'Made it home', 'lines', $lines_help ),
 			'listen'  => array( 'Hear it live', 'lines', $lines_help ),

@@ -86,6 +86,7 @@ function wor_data() {
 			'lon'     => (float) wor_meta( $pl->ID, 'lon' ),
 			'tz'      => (string) wor_meta( $pl->ID, 'tz' ),
 			'code'    => $code ? $code : wor_code3( $name ),
+			'whole'   => (bool) wor_meta( $pl->ID, 'whole' ),
 			'slug'    => $pl->post_name,
 			'url'     => get_permalink( $pl ),
 			'date'    => get_the_date( 'Y-m-d', $pl ),
@@ -145,6 +146,7 @@ function wor_data() {
 			'lon'      => $pl['lon'],
 			'tz'       => $pl['tz'],
 			'code'     => $pl['code'],
+			'whole'    => $pl['whole'],
 			'title'    => $m->post_title,
 			'by'       => $sel_slug[ $sel_id ],
 			'dur'      => 60 * (int) wor_meta( $m->ID, 'minutes' ),
@@ -180,7 +182,7 @@ function wor_globe_data() {
 	$d     = wor_data();
 	$small = array();
 	foreach ( $d['P'] as $p ) {
-		$row            = array_intersect_key( $p, array_flip( array( 'id', 'slug', 'city', 'country', 'lat', 'lon', 'tz', 'title', 'by', 'dur', 'tracks', 'genres', 'added', 'desc', 'mixcloud', 'spotify' ) ) );
+		$row            = array_intersect_key( $p, array_flip( array( 'id', 'slug', 'city', 'country', 'lat', 'lon', 'tz', 'whole', 'title', 'by', 'dur', 'tracks', 'genres', 'added', 'desc', 'mixcloud', 'spotify' ) ) );
 		$row['country'] = wor_globe_country_name( $row['country'] );
 		$small[]        = $row;
 	}

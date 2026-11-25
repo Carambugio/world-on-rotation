@@ -63,6 +63,22 @@ function wor_maybe_upgrade() {
 			update_option( 'wor_guides_131', 1 );
 			update_option( 'wor_guides_132', 1 );
 		}
+		// 1.6.28: a sample whole-country mix (highlife, Ghana). Added once; delete it like any other sample.
+		if ( get_option( 'wor_imported' ) && ! get_option( 'wor_sample_ghana' ) && function_exists( 'wor_insert' ) ) {
+			list( $gh ) = wor_insert( 'wor_place', 'Ghana', 'ghana', '', array(
+				'country' => 'Ghana', 'lat' => '7.95', 'lon' => '-1.03', 'tz' => 'Africa/Accra', 'code' => 'GHA', 'whole' => '1',
+			) );
+			if ( $gh ) {
+				wor_insert( 'wor_mix', 'Highlife Across Ghana', 'highlife-across-ghana',
+					'Sample: guitar band highlife from Kumasi to dance-band highlife from Accra, with the brass of Cape Coast in between.',
+					array(
+						'uid' => 'ghana-highlife', 'place' => (string) $gh, 'selector' => (string) wor_find( 'wor_selector', 'adaeze-nwosu' ),
+						'minutes' => '58', 'tracks' => '14', 'genres' => 'highlife, Ghana, guitar band, dance band', 'added' => current_time( 'Y-m-d' ),
+					) );
+				wor_flush_cache();
+			}
+			update_option( 'wor_sample_ghana', 1 );
+		}
 		if ( get_option( 'wor_imported' ) && function_exists( 'wor_create_pages' ) ) {
 			wor_create_pages();
 		}

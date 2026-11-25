@@ -499,8 +499,12 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city.grp .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))!important}
 .glabel.city.grp .pm .o{stroke-width:2.2}
 
-/* A mix for a whole country: the country name, same size as the others, in a thin ink frame with the count */
-.glabel.country.whole span{pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:2px 4px 2px 7px;border:1.5px solid var(--ink);border-radius:2px;background:rgba(246,239,226,.88);color:var(--ink)!important;text-shadow:none!important;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-.glabel.country.whole span .n{font:700 8.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0;color:#f6efe2;background:var(--ink);border-radius:2px;padding:2px 3px}
-.glabel.country.whole.got span{background:color-mix(in srgb,var(--ink) 14%,#f6efe2)}
-.glabel.country.whole span:hover{color:var(--ink)!important;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+/* A mix for a whole country: the country name is drawn as an entry stamp, bigger than any town's */
+/* the renderer stacks labels by depth; town stamps always sit above a country stamp */
+.glabel.country.whole{pointer-events:auto;cursor:pointer;z-index:1!important}
+.glabel.city{z-index:3!important}
+.glabel.country.whole span{display:block;padding:0;line-height:0;letter-spacing:0;text-shadow:none!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.glabel.country.whole svg{display:block;overflow:visible}
+.glabel.country.whole .paper{fill:rgba(246,239,226,.9)}
+.glabel.country.whole.got .paper{fill:color-mix(in srgb,var(--ink) 14%,#f6efe2)}
+.glabel.country.whole span:hover{filter:drop-shadow(0 2px 5px rgba(0,0,0,.55))}

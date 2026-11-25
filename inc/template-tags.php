@@ -50,7 +50,7 @@ function wort_plain_upper( $s ) {
 	return function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $s, 'UTF-8' ) : strtoupper( $s );
 }
 
-function wort_stamp( $sid, $city, $code, $added, $size, $who = 'RHYTHM PASSPORT' ) {
+function wort_stamp( $sid, $city, $code, $added, $size, $who = 'RHYTHM PASSPORT', $whole = false ) {
 	$months = array( 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC' );
 	$inks   = array( '#24498a', '#a3302b', '#2d6a44', '#5a3d88', '#1d6466', '#7a4719' );
 	$h      = wort_hash( $sid );
@@ -66,7 +66,16 @@ function wort_stamp( $sid, $city, $code, $added, $size, $who = 'RHYTHM PASSPORT'
 	$code   = esc_html( $code );
 	$m      = 'font-family="IBM Plex Mono,ui-monospace,monospace"';
 	$b      = 'font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="600"';
-	if ( 0 === $v ) {
+	if ( $whole ) {
+		// A whole-country mix: a wide entry stamp with cut corners and the country's name large.
+		$rot  = $rot / 2;
+		$bb   = 'font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700"';
+		$long = strlen( $cty ) > 8;
+		$fs   = $long ? 15 : 18;
+		$fit  = $long ? ' textLength="66" lengthAdjust="spacingAndGlyphs"' : '';
+		$arr  = "fill=\"none\" stroke=\"$col\" stroke-width=\"1.1\"";
+		$body = "<path d=\"M15 21H85L95 31V69L85 79H15L5 69V31Z\" fill=\"none\" stroke=\"$col\" stroke-width=\"3.6\"/><path d=\"M17.5 25.5H82.5L90.5 33.5V66.5L82.5 74.5H17.5L9.5 66.5V33.5Z\" fill=\"none\" stroke=\"$col\" stroke-width=\"1\"/><text x=\"50\" y=\"34.5\" text-anchor=\"middle\" $m font-size=\"5.2\" font-weight=\"600\" letter-spacing=\"1.6\" fill=\"$col\">ENTRY · $code</text><path d=\"M16 38.5H84\" stroke=\"$col\" stroke-width=\".9\"/><text x=\"50\" y=\"56\" text-anchor=\"middle\" $bb font-size=\"$fs\" letter-spacing=\"1.8\"$fit fill=\"$col\">$cty</text><path d=\"M16 61H84\" stroke=\"$col\" stroke-width=\".9\"/><path d=\"M19 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4\" $arr/><text x=\"52\" y=\"69.4\" text-anchor=\"middle\" $m font-size=\"5\" font-weight=\"600\" letter-spacing=\".8\" fill=\"$col\">$date</text><path d=\"M74 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4\" $arr/>";
+	} elseif ( 0 === $v ) {
 		$body = "<circle cx=\"50\" cy=\"50\" r=\"40\" fill=\"none\" stroke=\"$col\" stroke-width=\"3.2\"/><circle cx=\"50\" cy=\"50\" r=\"33\" fill=\"none\" stroke=\"$col\" stroke-width=\"1.2\"/><path id=\"{$uid}a\" d=\"M50 50 m-36.5 0 a36.5 36.5 0 1 1 73 0\" fill=\"none\"/><path id=\"{$uid}b\" d=\"M50 50 m-36.5 0 a36.5 36.5 0 1 0 73 0\" fill=\"none\"/><text $m font-size=\"6\" font-weight=\"600\" letter-spacing=\"1.2\" fill=\"$col\"><textPath href=\"#{$uid}a\" startOffset=\"50%\" text-anchor=\"middle\" dominant-baseline=\"middle\">$cty</textPath></text><text $m font-size=\"4.6\" letter-spacing=\".9\" fill=\"$col\"><textPath href=\"#{$uid}b\" startOffset=\"50%\" text-anchor=\"middle\" dominant-baseline=\"middle\">$who</textPath></text><text x=\"50\" y=\"40\" text-anchor=\"middle\" $m font-size=\"5\" letter-spacing=\"1.4\" fill=\"$col\">ARRIVAL</text><text x=\"50\" y=\"58\" text-anchor=\"middle\" $b font-size=\"21\" fill=\"$col\">$code</text><text x=\"50\" y=\"67\" text-anchor=\"middle\" $m font-size=\"5\" fill=\"$col\">$date</text>";
 	} elseif ( 1 === $v ) {
 		$body = "<rect x=\"10\" y=\"20\" width=\"80\" height=\"60\" rx=\"7\" fill=\"none\" stroke=\"$col\" stroke-width=\"3\"/><rect x=\"15\" y=\"25\" width=\"70\" height=\"50\" rx=\"4\" fill=\"none\" stroke=\"$col\" stroke-width=\"1\"/><text x=\"50\" y=\"35\" text-anchor=\"middle\" $m font-size=\"6.2\" font-weight=\"600\" letter-spacing=\"1\" fill=\"$col\">$cty</text><text x=\"50\" y=\"55\" text-anchor=\"middle\" $b font-size=\"20\" fill=\"$col\">$code</text><text x=\"50\" y=\"63.5\" text-anchor=\"middle\" $m font-size=\"5\" fill=\"$col\">$date</text><text x=\"50\" y=\"71\" text-anchor=\"middle\" $m font-size=\"3.9\" letter-spacing=\".6\" fill=\"$col\">$who</text>";
@@ -79,12 +88,12 @@ function wort_stamp( $sid, $city, $code, $added, $size, $who = 'RHYTHM PASSPORT'
 function wort_pstamp( $p, $size ) {
 	$d   = wor_data();
 	$who = isset( $d['C'][ $p['by'] ] ) ? wort_plain_upper( $d['C'][ $p['by'] ]['name'] ) : 'RHYTHM PASSPORT';
-	return wort_stamp( $p['id'], $p['city'], $p['code'], $p['added'], $size, $who );
+	return wort_stamp( $p['id'], $p['city'], $p['code'], $p['added'], $size, $who, ! empty( $p['whole'] ) );
 }
 
 function wort_place_stamp( $c, $size ) {
 	$added = $c['items'] ? end( $c['items'] )['added'] : $c['date'];
-	return wort_stamp( 'city-' . $c['city'], $c['city'], $c['code'], $added, $size );
+	return wort_stamp( 'city-' . $c['city'], $c['city'], $c['code'], $added, $size, 'RHYTHM PASSPORT', ! empty( $c['whole'] ) );
 }
 
 function wort_dur( $s ) {

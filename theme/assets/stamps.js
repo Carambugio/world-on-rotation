@@ -30,7 +30,7 @@
   /* ---- the styles ---- */
   const S = {};
   // Ghana Immigration Service: green oval, double ring filled with 0101 microtext, stars at the sides, "Valid for ... days", ARRIVAL and the port below.
-  S.Ghana = {ink: "#2e7a4c", w: 100, h: 72, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
+  S.Ghana = {shape: "oval", ink: "#2e7a4c", w: 100, h: 72, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
     return `<ellipse cx="50" cy="36" rx="47" ry="33" fill="none" stroke="currentColor" stroke-width="2.4"/>
       <ellipse cx="50" cy="36" rx="38" ry="25" fill="none" stroke="currentColor" stroke-width="1.2"/>
       ${arc(o.id + "m", 50, 36, 42.5, 29, true, "0101010101010101010101010101010101010101010101", 3.2, {f: MONO, w: 500, ls: 0})}
@@ -42,7 +42,7 @@
       ${T(50, 55.5, "ARRIVAL · " + o.port, 4.4, {max: 50})}`;
   }};
   // Mali: red rounded rectangle, the airport's name in italic, the date and time in a box, arrows under it.
-  S.Mali = {ink: "#b03a36", w: 100, h: 60, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  07:50`, draw(o, g){
+  S.Mali = {shape: "rrect", ink: "#b03a36", w: 100, h: 60, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  07:50`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="54" rx="7" fill="none" stroke="currentColor" stroke-width="2.2"/>
       ${T(50, 15, "Aéroport International", 7, {f: SERIF, w: 600, max: 80})}
       ${T(50, 23.5, o.port, 6.4, {f: SERIF, w: 600, max: 80})}
@@ -52,7 +52,7 @@
   }};
   // Nigeria Immigration Service: green rounded rectangle, NIS and the port top left, the service badge top right,
   // EMPLOYMENT PROHIBITED up the left side, PERMITTED TO STAY ONE MONTH under the date.
-  S.Nigeria = {ink: "#3c8a57", w: 100, h: 66, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
+  S.Nigeria = {shape: "rrect", ink: "#3c8a57", w: 100, h: 66, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="60" rx="9" fill="none" stroke="currentColor" stroke-width="2.2"/>
       ${T(22, 14, "NIS", 7, {a: "start"})}${T(22, 22, o.port, 6, {a: "start", max: 50})}
       <rect x="77" y="8" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1"/><path d="M79.5 17.5l4-6 2 3 2.5-4" fill="none" stroke="currentColor" stroke-width="1.2"/>
@@ -61,7 +61,7 @@
       ${g ? T(55, 52, o.small, 5, {f: MONO}) : `${T(55, 49, "PERMITTED TO STAY ONE", 4.4, {max: 64})}${T(55, 55, "MONTH FROM DATE OF ENTRY", 4.4, {max: 64})}`}`;
   }};
   // Polícia Federal, Brazil: sharp rectangle, title on top, date and post number, CLAS. DOC. PRAZO boxes, a numbered column on the right.
-  S.Brazil = {ink: "#3a3352", w: 100, h: 60, date: d => `${p2(d.d)} ${p2(d.m + 1)} ${d.yy}`, draw(o, g){
+  S.Brazil = {shape: "rect", ink: "#3a3352", w: 100, h: 60, date: d => `${p2(d.d)} ${p2(d.m + 1)} ${d.yy}`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="54" fill="none" stroke="currentColor" stroke-width="1.8"/>
       <path d="M84 3V57M84 16.5H97M84 30H97M84 43.5H97" stroke="currentColor" stroke-width="1"/>
       ${["1","2","3","4"].map((n, i) => T(90.5, 12.5 + i*13.5, n, 6, {f: COND})).join("")}
@@ -71,7 +71,7 @@
       ${T(6, 50, "CLAS.", 3.6, {a: "start", w: 600})}${T(33, 50, "DOC.", 3.6, {a: "start", w: 600})}${T(60, 50, "PRAZO", 3.6, {a: "start", w: 600})}`;
   }};
   // Migración Colombia: rounded square frame, title top left, port code box top right, plane badge, E badge, PT PIP PO VISA tick boxes.
-  S.Colombia = {ink: "#2a4f9e", w: 100, h: 66, date: d => `${p2(d.d)} ${MO_ES[d.m]} ${d.y}`, draw(o, g){
+  S.Colombia = {shape: "rrect", ink: "#2a4f9e", w: 100, h: 66, date: d => `${p2(d.d)} ${MO_ES[d.m]} ${d.y}`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="60" rx="5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="0.8 0.7"/>
       ${T(8, 14, "MIGRACIÓN", 8, {a: "start", f: COND, w: 600})}${T(8, 19.5, "COLOMBIA", 5.2, {a: "start", ls: 1.5})}
       <rect x="70" y="7" width="22" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/>${T(81, 16.5, o.code, 7.5, {f: COND})}
@@ -82,7 +82,7 @@
       ${T(55, 58, "PT▢ PIP▢ PO▢ VISA▢", 4.4, {f: MONO, w: 500, max: 64})}`;
   }};
   // República de Cuba: magenta, no outer frame; a rounded banner with the country's name, numbers in the corners, the airport's name below, dotted ornaments.
-  S.Cuba = {ink: "#c03380", w: 100, h: 60, date: d => `${p2(d.d)} ${MO_ES[d.m]} ${d.y}`, draw(o, g){
+  S.Cuba = {shape: "banner", ink: "#c03380", w: 100, h: 60, date: d => `${p2(d.d)} ${MO_ES[d.m]} ${d.y}`, draw(o, g){
     return `<rect x="20" y="4" width="60" height="11" rx="5.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
       ${T(50, 12, "REPÚBLICA DE CUBA", 5.6, {max: 54})}
       ${T(9, 12, "038", 5, {f: COND})}${T(91, 12, "038", 5, {f: COND})}${T(91, 55, "038", 5, {f: COND})}
@@ -92,7 +92,7 @@
       ${T(50, 54, o.port, 6, {f: COND, max: 56})}<path d="M22 50h6M72 50h6" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1.4"/>`;
   }};
   // DGM, DR Congo: blue double rectangle, the post on top, REP. DEM. DU CONGO / DGM at the bottom, sides marked, the date in red.
-  S["DR Congo"] = {ink: "#2c4797", red: "#c23b3b", w: 100, h: 64, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g, s){
+  S["DR Congo"] = {shape: "rect2", ink: "#2c4797", red: "#c23b3b", w: 100, h: 64, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g, s){
     return `<rect x="3" y="3" width="94" height="58" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="86" height="50" fill="none" stroke="currentColor" stroke-width=".9"/>
       ${T(50, 16, o.port, 6.6, {max: 64})}<path d="M18 19H82" stroke="currentColor" stroke-width=".8"/>
       <circle cx="13" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width=".9"/>${T(13, 14.8, "B", 4.2)}<circle cx="87" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width=".9"/>${T(87, 14.8, "B", 4.2)}
@@ -102,7 +102,7 @@
       <path d="M18 46H82" stroke="currentColor" stroke-width=".8"/>${T(50, 51, "REP. DEM. DU CONGO", 5, {max: 62})}${T(50, 56, "DGM", 4.6)}`;
   }};
   // Ethiopian Immigration, Bole: rounded rectangle, an inner box for the date, a border of ARV numbers, the name in Ge'ez script on top.
-  S.Ethiopia = {ink: "#55468a", w: 100, h: 64, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
+  S.Ethiopia = {shape: "stadium", ink: "#55468a", w: 100, h: 64, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="58" rx="14" fill="none" stroke="currentColor" stroke-width="2"/>
       <rect x="8" y="8" width="84" height="48" rx="10" fill="none" stroke="currentColor" stroke-width=".9"/>
       ${T(50, 6.6, "ARV 226 · ARV 226 · ARV 226 · ARV 226", 2.8, {f: MONO, w: 500, max: 60})}${T(50, 60.2, "ARV 226 · ARV 226 · ARV 226 · ARV 226", 2.8, {f: MONO, w: 500, max: 60})}
@@ -112,7 +112,7 @@
       ${T(50, 45, "ETHIOPIAN IMMIGRATION", 5, {max: 66})}${T(50, 51, g ? o.small : o.port + " · Arrival", 4.6, {max: 60, w: 600})}`;
   }};
   // Georgia (current): rectangle; GE in an oval, the crossing point's name, the five-cross flag, date with the entry arrow, the vehicle, the officer's number.
-  S.Georgia = {ink: "#2f2f33", w: 100, h: 64, date: d => `${p2(d.d)} ${p2(d.m + 1)} ${d.y}  9`, draw(o, g){
+  S.Georgia = {shape: "rect", ink: "#2f2f33", w: 100, h: 64, date: d => `${p2(d.d)} ${p2(d.m + 1)} ${d.y}  9`, draw(o, g){
     const flag = `<g transform="translate(77 7)"><rect width="16" height="11" fill="none" stroke="currentColor" stroke-width="1"/><path d="M8 0v11M0 5.5h16" stroke="currentColor" stroke-width="1.6"/>${[[4,2.75],[12,2.75],[4,8.25],[12,8.25]].map(([x,y]) => `<path d="M${x-1.3} ${y}h2.6M${x} ${y-1.3}v2.6" stroke="currentColor" stroke-width=".7"/>`).join("")}</g>`;
     return `<rect x="3" y="3" width="94" height="58" fill="none" stroke="currentColor" stroke-width="1.8"/>
       <ellipse cx="15" cy="12.5" rx="7.5" ry="5" fill="none" stroke="currentColor" stroke-width="1"/>${T(15, 14.6, "GE", 5.4)}
@@ -122,7 +122,7 @@
       ${plane(14, 52, 0.7)}${T(50, 55, "0562", 7, {f: MONO, w: 600})}`;
   }};
   // Immigration India (New Delhi, 2022): double rectangle, code line, side codes, red date, ARRIVED, the port in its own box.
-  S.India = {ink: "#2b5fae", red: "#c8363b", w: 100, h: 66, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g, s){
+  S.India = {shape: "rect2", ink: "#2b5fae", red: "#c8363b", w: 100, h: 66, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g, s){
     return `<rect x="3" y="3" width="94" height="60" fill="none" stroke="currentColor" stroke-width="2"/><rect x="6.5" y="6.5" width="87" height="53" fill="none" stroke="currentColor" stroke-width=".9"/>
       ${T(50, 15, "IMMIGRATION INDIA", 7, {max: 70})}${T(50, 21.5, "A2-786", 5, {f: MONO})}
       ${T(0, 0, "A2 786", 4, {f: MONO, tr: "translate(12 36) rotate(-90)"})}${T(0, 0, "657 A2", 4, {f: MONO, tr: "translate(88 36) rotate(90)"})}
@@ -131,14 +131,14 @@
       <rect x="22" y="47" width="56" height="10" fill="none" stroke="currentColor" stroke-width=".9"/>${T(50, 54.5, o.port, 6, {max: 50})}`;
   }};
   // Imigrasi Indonesia: the triangle, lines of text narrowing to the top, the date across the middle.
-  S.Indonesia = {ink: "#4a3d8c", w: 100, h: 80, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
+  S.Indonesia = {shape: "tri", ink: "#4a3d8c", w: 100, h: 80, date: d => `${p2(d.d)} ${MO[d.m]} ${d.y}`, draw(o, g){
     return `<path d="M50 3L97 77H3Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M50 12L88 72H12Z" fill="none" stroke="currentColor" stroke-width=".8" stroke-linejoin="round"/>
       ${T(50, 31, "A18", 4.8, {f: MONO})}${T(50, 38.5, o.port, 5.2, {max: 30})}
       ${T(50, 52, big(o, g), g ? 16 : 8.5, {f: COND, w: 600, max: g ? 58 : 50, ls: 0.5})}
       ${T(50, 61, g ? o.small : "IMIGRASI", 4.8, {f: g ? MONO : SANS})}${T(50, 68, "INDONESIA", 4.8, {ls: 1})}`;
   }};
   // Jamaica: purple oval, IMMIGRATION OFFICER round the top, Landed, the date in red, JAMAICA and EMPLOYMENT NOT PERMITTED below.
-  S.Jamaica = {ink: "#5f4489", red: "#c3373f", w: 100, h: 70, date: d => `${MO[d.m]} ${p2(d.d)} ${d.y}`, draw(o, g, s){
+  S.Jamaica = {shape: "oval", ink: "#5f4489", red: "#c3373f", w: 100, h: 70, date: d => `${MO[d.m]} ${p2(d.d)} ${d.y}`, draw(o, g, s){
     return `<ellipse cx="50" cy="35" rx="47" ry="32" fill="none" stroke="currentColor" stroke-width="2"/>
       ${arc(o.id + "j", 50, 35, 41, 26, true, "0336 IMMIGRATION OFFICER", 5.4)}
       ${T(30, 25, "Landed", 4.6, {w: 600, f: SERIF})}
@@ -147,7 +147,7 @@
       ${arc(o.id + "k", 50, 35, 41, 26, false, "EMPLOYMENT NOT PERMITTED", 4.3)}`;
   }};
   // Sûreté Générale, Lebanon: red rectangle; S.G. DU LIBAN, the cedar and the Arabic name across the top; the date; Arrivée, the port and a number.
-  S.Lebanon = {ink: "#c0353a", w: 100, h: 62, date: d => `${p2(d.d)} ${MO_FR[d.m]} ${d.y}`, draw(o, g){
+  S.Lebanon = {shape: "rect", ink: "#c0353a", w: 100, h: 62, date: d => `${p2(d.d)} ${MO_FR[d.m]} ${d.y}`, draw(o, g){
     const cedar = `<path d="M50 6.5l-3.5 4.5h2l-3.5 4h2.5l-3.5 4h12l-3.5-4h2.5l-3.5-4h2zM49.3 19.5h1.4v2.5h-1.4z" fill="currentColor"/>`;
     return `<rect x="3" y="3" width="94" height="56" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 24H97" stroke="currentColor" stroke-width="1.2"/>
       ${T(24, 17, "S.G. DU LIBAN", 6, {max: 36, f: COND})}${cedar}${T(76, 17, "الأمن العام اللبناني", 6, {max: 36, f: `font-family="Noto Naskh Arabic,Geeza Pro,Arial,sans-serif"`})}
@@ -155,7 +155,7 @@
       ${g ? T(50, 53, o.small, 5, {f: MONO}) : `${T(8, 52, "Arrivée", 5.4, {a: "start", f: SERIF, w: 600})}${T(8, 57.5, o.port, 5.2, {a: "start", f: COND, max: 40})}${T(80, 56, "7982", 10, {f: COND, w: 600})}`}`;
   }};
   // South Africa: a circle; the airport round the top, ENTRY, the date written year-month-day, a number, REPUBLIC OF SOUTH AFRICA round the bottom, a plane at the side.
-  S["South Africa"] = {ink: "#353535", w: 100, h: 100, date: d => `${d.y}-${p2(d.m + 1)}-${p2(d.d)}`, draw(o, g){
+  S["South Africa"] = {shape: "circle", ink: "#353535", w: 100, h: 100, date: d => `${d.y}-${p2(d.m + 1)}-${p2(d.d)}`, draw(o, g){
     return `<circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2"/>
       ${arc(o.id + "s", 50, 50, 39, 39, true, o.whole ? "PASSPORT CONTROL" : o.port + " INTERNATIONAL", 6.2)}
       ${o.whole ? "" : T(50, 33, "AIRPORT", 5.4)}${T(50, 40, "ENTRY", 6)}
@@ -164,7 +164,7 @@
       ${plane(86, 50, 0.6)}${arc(o.id + "t", 50, 50, 39, 39, false, "REPUBLIC OF SOUTH AFRICA", 5.6)}`;
   }};
   // Türkiye Cumhuriyeti: rectangle; TR in a ring of stars, the crossing point, date with time code, the code column on the right, entry arrow and vehicle boxes.
-  S["Türkiye"] = {ink: "#2c2c2e", w: 100, h: 64, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  01`, draw(o, g){
+  S["Türkiye"] = {shape: "rect", ink: "#2c2c2e", w: 100, h: 64, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  01`, draw(o, g){
     let ring = ""; for(let i = 0; i < 12; i++){ const a = i * Math.PI / 6; ring += `<circle cx="${(15 + 7.2*Math.cos(a)).toFixed(2)}" cy="${(19 + 7.2*Math.sin(a)).toFixed(2)}" r=".7" fill="currentColor"/>`; }
     return `<rect x="3" y="3" width="94" height="58" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
       ${T(46, 9.8, "TÜRKİYE CUMHURİYETİ", 4.6, {max: 56})}${ring}<ellipse cx="15" cy="19" rx="5.2" ry="4.4" fill="none" stroke="currentColor" stroke-width=".9"/>${T(15, 21, "TR", 5)}
@@ -176,7 +176,7 @@
       <rect x="63" y="45" width="19" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width=".9"/>${plane(72.5, 50.5, 0.7)}`;
   }};
   // UK Immigration Officer: rounded double frame, the officer's number between stars, the date, the port with its terminal.
-  S["United Kingdom"] = {ink: "#2a2a2e", w: 100, h: 68, date: d => `${d.d < 10 ? "- " + d.d : d.d} ${MO[d.m]} ${d.y}`, draw(o, g){
+  S["United Kingdom"] = {shape: "rrect2", ink: "#2a2a2e", w: 100, h: 68, date: d => `${d.d < 10 ? "- " + d.d : d.d} ${MO[d.m]} ${d.y}`, draw(o, g){
     return `<rect x="3" y="3" width="94" height="62" rx="11" fill="none" stroke="currentColor" stroke-width="2.6"/><rect x="8" y="8" width="84" height="52" rx="7" fill="none" stroke="currentColor" stroke-width="1"/>
       ${T(50, 19, "IMMIGRATION OFFICER", 6.4, {max: 70})}
       ${star(30, 25.5, 2.2)}${T(50, 27.5, "(3631)", 6, {f: MONO, w: 600})}${star(70, 25.5, 2.2)}
@@ -184,7 +184,7 @@
       ${T(50, 54, g ? o.small : o.port, 6.2, {max: 64, f: g ? MONO : SANS})}`;
   }};
   // US Customs and Border Protection: an arch with the department round it and stars at its feet; ADMITTED, the port code, the date in red, Class and Until lines.
-  S["United States"] = {ink: "#2b3450", red: "#c4363c", w: 100, h: 80, date: d => `${MO[d.m]} ${p2(d.d)} ${d.y}`, draw(o, g, s){
+  S["United States"] = {shape: "arch", ink: "#2b3450", red: "#c4363c", w: 100, h: 80, date: d => `${MO[d.m]} ${p2(d.d)} ${d.y}`, draw(o, g, s){
     return `<path d="M5 77V47A45 43 0 0 1 95 47V77" fill="none" stroke="currentColor" stroke-width="2"/>
       ${arc(o.id + "u", 50, 47, 38.5, 36.5, true, "DEPARTMENT OF HOMELAND SECURITY · U.S. CUSTOMS AND BORDER PROTECTION", 2.9, {w: 600, ls: 0})}
       ${star(5, 77, 2.4)}${star(95, 77, 2.4)}
@@ -194,7 +194,7 @@
       ${T(0, 0, "3781", 4.4, {f: MONO, tr: "translate(86 62) rotate(90)"})}`;
   }};
   // Schengen entry stamp: square corners, the country's letter in a ring of stars, the vehicle top right, the date in red, the port and its code, the entry arrow.
-  const schengen = (letter) => ({ink: "#2e2e30", red: "#c0393c", w: 100, h: 64, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  45`, draw(o, g, s){
+  const schengen = (letter) => ({shape: "rect", ink: "#2e2e30", red: "#c0393c", w: 100, h: 64, date: d => `${p2(d.d)}.${p2(d.m + 1)}.${d.yy}  45`, draw(o, g, s){
     let ring = ""; for(let i = 0; i < 12; i++){ const a = i * Math.PI / 6; ring += `<circle cx="${(15 + 7*Math.cos(a)).toFixed(2)}" cy="${(14 + 7*Math.sin(a)).toFixed(2)}" r=".75" fill="currentColor"/>`; }
     return `<rect x="3" y="3" width="94" height="58" fill="none" stroke="currentColor" stroke-width="1.8"/>
       ${ring}${T(15, 16.5, letter, letter.length > 1 ? 5 : 7)}
@@ -215,6 +215,27 @@
 
   const API = window.WORSTAMP = {
     has: c => !!S[c],
+    /* the small pin for a town on the globe, in its country's stamp shape: 30x30, classes halo / o / i like the generic pin */
+    pin(c, code){
+      const s = S[c]; if(!s) return null;
+      const t = `<text x="15" y="${s.shape === "tri" ? 22.4 : s.shape === "arch" ? 19.6 : 18.3}" text-anchor="middle">${X(code)}</text>`;
+      const R = (x, y, w, h, r, cls, extra = "") => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" class="${cls}"${extra}/>`;
+      const E = (rx, ry, cls) => `<ellipse cx="15" cy="15" rx="${rx}" ry="${ry}" class="${cls}"/>`;
+      const P = (d, cls) => `<path d="${d}" class="${cls}"/>`;
+      const sh = {
+        oval: E(14.8, 11, "halo") + E(13.4, 9.6, "o") + E(10.6, 7, "i"),
+        circle: `<circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/>`,
+        rect: R(0.3, 5.3, 29.4, 19.4, 0.5, "halo") + R(1.5, 6.5, 27, 17, 0, "o") + R(4, 9, 22, 12, 0, "i"),
+        rect2: R(0.3, 5.3, 29.4, 19.4, 0.5, "halo") + R(1.5, 6.5, 27, 17, 0, "o") + R(3.6, 8.6, 22.8, 12.8, 0, "i", ' style="stroke-dasharray:none"'),
+        rrect: R(0.3, 5.3, 29.4, 19.4, 4.5, "halo") + R(1.5, 6.5, 27, 17, 3.6, "o") + R(4, 9, 22, 12, 2, "i"),
+        rrect2: R(0.3, 4.8, 29.4, 20.4, 6, "halo") + R(1.5, 6, 27, 18, 5, "o") + R(4, 8.6, 22, 12.8, 3, "i", ' style="stroke-dasharray:none"'),
+        stadium: R(0.3, 5.3, 29.4, 19.4, 9.7, "halo") + R(1.5, 6.5, 27, 17, 8.5, "o") + R(5, 10, 20, 10, 1, "i", ' style="stroke-dasharray:none"'),
+        banner: R(0.3, 5.3, 29.4, 19.4, 3, "halo") + R(1.5, 6.5, 27, 17, 2, "o", ' style="stroke-dasharray:1.4 1.1"') + R(7, 8.2, 16, 3.2, 1.6, "i", ' style="stroke-dasharray:none"'),
+        tri: P("M15 0.6L29.6 27.4H0.4Z", "halo") + P("M15 2.6L27.8 26.2H2.2Z", "o") + P("M15 7.4L23.6 23.4H6.4Z", "i"),
+        arch: P("M0.6 28.8V14.8A14.4 14.2 0 0 1 29.4 14.8V28.8Z", "halo") + P("M2 27.6V15A13 12.6 0 0 1 28 15V27.6", "o") + P("M5 25V15.4A10 9.6 0 0 1 25 15.4V25", "i"),
+      }[s.shape] || "";
+      return {ink: s.ink, svg: sh + t};
+    },
     ink: c => S[c] && S[c].ink,
     /* country, {id, city, code, whole, added(YYYY-MM-DD), name (globe big line), small (globe line)}, globe? */
     draw(country, p, globe){

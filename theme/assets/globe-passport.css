@@ -420,7 +420,7 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.country span{color:#4a3a28;text-shadow:-1px -1px 0 #ece2cc,0px -1px 0 #ece2cc,1px -1px 0 #ece2cc,-1px 0px 0 #ece2cc,1px 0px 0 #ece2cc,-1px 1px 0 #ece2cc,0px 1px 0 #ece2cc,1px 1px 0 #ece2cc;font-weight:600;-webkit-font-smoothing:antialiased}
 .glabel.city span{left:-14px;top:-14px;display:flex;align-items:center;gap:5px;color:#1b2638;font-weight:700;text-shadow:-1px -1px 0 #efe6d2,0px -1px 0 #efe6d2,1px -1px 0 #efe6d2,-1px 0px 0 #efe6d2,1px 0px 0 #efe6d2,-1px 1px 0 #efe6d2,0px 1px 0 #efe6d2,1px 1px 0 #efe6d2;-webkit-font-smoothing:antialiased}
 .glabel.city .pm{width:28px;height:28px;flex:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
-.glabel.city .pm circle{fill:rgba(239,230,210,.94);stroke:var(--ink,#24324a)}
+.glabel.city .pm :is(circle,ellipse,rect,path){fill:rgba(239,230,210,.94);stroke:var(--ink,#24324a)}
 .glabel.city .pm .o{stroke-width:1.6}.glabel.city .pm .i{stroke-width:.8;fill:none;stroke-dasharray:1.6 1.2}
 .glabel.city .pm text{font:700 7.4px "IBM Plex Mono",ui-monospace,monospace;fill:var(--ink,#24324a);letter-spacing:.3px}
 .glabel.city .pm{opacity:.82}

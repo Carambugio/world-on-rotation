@@ -95,15 +95,10 @@ function labelEl(d){
   if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
   if(d.kind === "country" && d.whole){
     el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
-    d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
-    const n = d.whole.items.length;
-    // compact on the globe: just a little bigger than a town stamp
-    const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 7 ? ` textLength="70" lengthAdjust="spacingAndGlyphs"` : "";
-    s.innerHTML = `<svg viewBox="0 0 100 56" width="62" height="35" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
-      <path class="paper" d="M8 2H92L98 8V48L92 54H8L2 48V8Z"/>
-      <g fill="none" stroke="${ink}"><path d="M8 2H92L98 8V48L92 54H8L2 48V8Z" stroke-width="3.4"/><path d="M10 7H90L93 10V46L90 49H10L7 46V10Z" stroke-width="1"/></g>
-      <text x="50" y="30" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="21" letter-spacing="1.2"${fit} fill="${ink}">${nm}</text>
-      <text x="50" y="44.5" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="11" letter-spacing=".4" fill="${ink}">${n} MIX${n > 1 ? "ES" : ""}</text></svg>`;
+    // Same size as any country name, in a thin ink frame with the number of mixes: reads as "this country has mixes"
+    // without piling big stamps on the map once many countries have one.
+    const n = d.whole.items.length; s.title = `${d.whole.city}: ${n} mix${n > 1 ? "es" : ""} for the whole country`;
+    s.insertAdjacentHTML("beforeend", `<b class="n">${n}</b>`);
     if(hasStamp(d.whole.city)) el.classList.add("got");
   }
   let down = null;
@@ -327,7 +322,7 @@ function refreshLabels(){
   const alt = world.pointOfView().altitude, key = Math.round(Math.log2(alt)*5);
   if(key === labelKey) return; labelKey = key;
   const minA = 0.0022*alt*alt; // country names show from about 300,000 km² at the opening view
-  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA || l.whole), ...CITY_LABELS]);
+  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA * (l.whole ? 0.2 : 1)), ...CITY_LABELS]);
   const f = Math.max(0.1, Math.min(1, alt/1.85));
   world.pointRadius(d => (0.2 + 0.09*Math.sqrt(d.items.length))*f);
   world.ringMaxRadius(d => (1.1 + 0.35*Math.sqrt(d.items.length))*f);
@@ -362,7 +357,7 @@ function overlaps(b, list){ for(const o of list){ if(b[0] < o[2] && b[2] > o[0] 
 function tidyLabels(){
   const data = world.htmlElementsData(); if(!data || !data.length) return;
   const pov = world.pointOfView(), centre = [pov.lng, pov.lat], placed = [], horizon = Math.acos(1/(1 + pov.altitude)) - 0.1;
-  const rank = x => x.kind === "city" || x.whole ? 1e9 + ((x.whole || x.c) === activeCity ? 1e6 : 0) + (x.whole || x.c).items.length : x.a;
+  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.whole ? 1e3 + (x.whole === activeCity ? 1e6 : 0) + x.a : x.a;
   const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [];
   for(const d of order){
     const s = d.el && d.el.firstChild; if(!s) continue;
@@ -379,12 +374,9 @@ function tidyLabels(){
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
-        /* A whole-country stamp eases down a little as you zoom out, but always stays bigger than a town's */
-        const k = d.whole ? Math.max(0.8, Math.min(1, 1.05 - (pov.altitude - 0.6) * 0.2)) : 1;
-        if(d.whole && d.k !== k){ d.k = k; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${k.toFixed(2)})`; }
-        for(const o of d.whole ? [0] : [0, -1.25, 1.25, -2.5, 2.5]){
-          const dy = o*d.h, b = [x - d.w*k/2, y - d.h*k/2 + dy, x + d.w*k/2, y + d.h*k/2 + dy];
-          if(d.whole || !overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }   // a whole-country stamp never moves off its country
+        for(const o of d.whole ? [0, -1, 1] : [0, -1.25, 1.25, -2.5, 2.5]){   // a framed country name only nudges, so it never leaves its country
+          const dy = o*d.h, b = [x - d.w/2, y - d.h/2 + dy, x + d.w/2, y + d.h/2 + dy];
+          if(!overlaps(b, placed) || (d.whole && d.whole === activeCity && !o)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }
         }
       }
     }

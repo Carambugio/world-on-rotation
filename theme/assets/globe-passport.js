@@ -97,9 +97,13 @@ function labelEl(d){
     el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
     d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
     const n = d.whole.items.length;
-    s.innerHTML = `<svg viewBox="2 18 96 64" width="138" height="92" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
-      <path class="paper" d="M15 21H85L95 31V69L85 79H15L5 69V31Z"/>
-      <g opacity=".92">${countryStampBody(ink, d.whole.city, "ENTRY · " + iso3(d.whole.country || d.whole.city), n + (n > 1 ? " MIXES" : " MIX"))}</g></svg>`;
+    // compact on the globe: just a little bigger than a town stamp
+    const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 7 ? ` textLength="70" lengthAdjust="spacingAndGlyphs"` : "";
+    s.innerHTML = `<svg viewBox="0 0 100 56" width="84" height="47" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
+      <path class="paper" d="M8 2H92L98 8V48L92 54H8L2 48V8Z"/>
+      <g fill="none" stroke="${ink}"><path d="M8 2H92L98 8V48L92 54H8L2 48V8Z" stroke-width="3.4"/><path d="M10 7H90L93 10V46L90 49H10L7 46V10Z" stroke-width="1"/></g>
+      <text x="50" y="31" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="20" letter-spacing="1.5"${fit} fill="${ink}">${nm}</text>
+      <text x="50" y="43.5" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="9" letter-spacing=".8" fill="${ink}">${n} MIX${n > 1 ? "ES" : ""}</text></svg>`;
     if(hasStamp(d.whole.city)) el.classList.add("got");
   }
   let down = null;
@@ -376,7 +380,7 @@ function tidyLabels(){
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
         /* A whole-country stamp eases down a little as you zoom out, but always stays bigger than a town's */
-        const k = d.whole ? Math.max(0.78, Math.min(1.1, 1.1 - (pov.altitude - 0.6) * 0.3)) : 1;
+        const k = d.whole ? Math.max(0.85, Math.min(1, 1.05 - (pov.altitude - 0.6) * 0.15)) : 1;
         if(d.whole && d.k !== k){ d.k = k; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${k.toFixed(2)})`; }
         for(const o of d.whole ? [0] : [0, -1.25, 1.25, -2.5, 2.5]){
           const dy = o*d.h, b = [x - d.w*k/2, y - d.h*k/2 + dy, x + d.w*k/2, y + d.h*k/2 + dy];

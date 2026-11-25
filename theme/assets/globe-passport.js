@@ -96,7 +96,10 @@ function labelEl(d){
   if(d.kind === "country" && d.whole){
     el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
     d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
-    s.insertAdjacentHTML("beforeend", `<i>${d.whole.items.length > 1 ? d.whole.items.length + " mixes" : "1 mix"}</i>`);
+    const n = d.whole.items.length;
+    s.innerHTML = `<svg viewBox="2 18 96 64" width="138" height="92" aria-label="${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}">
+      <path class="paper" d="M15 21H85L95 31V69L85 79H15L5 69V31Z"/>
+      <g opacity=".92">${countryStampBody(ink, d.whole.city, "ENTRY · " + iso3(d.whole.country || d.whole.city), n + (n > 1 ? " MIXES" : " MIX"))}</g></svg>`;
     if(hasStamp(d.whole.city)) el.classList.add("got");
   }
   let down = null;
@@ -372,8 +375,8 @@ function tidyLabels(){
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
-        /* A whole-country stamp shrinks as you zoom out, so it stays inside its country and off its neighbours' stamps */
-        const k = d.whole ? Math.max(0.5, Math.min(1, 1 - (pov.altitude - 0.9) * 0.6)) : 1;
+        /* A whole-country stamp eases down a little as you zoom out, but always stays bigger than a town's */
+        const k = d.whole ? Math.max(0.78, Math.min(1.1, 1.1 - (pov.altitude - 0.6) * 0.3)) : 1;
         if(d.whole && d.k !== k){ d.k = k; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${k.toFixed(2)})`; }
         for(const o of d.whole ? [0] : [0, -1.25, 1.25, -2.5, 2.5]){
           const dy = o*d.h, b = [x - d.w*k/2, y - d.h*k/2 + dy, x + d.w*k/2, y + d.h*k/2 + dy];
@@ -523,9 +526,9 @@ function openCity(city, playlistId){
   openPanel(`
     <div class="panel-head">
       <div>
-        <div class="visa-top"><span>Visa · ${iso3(c.country)}</span><span>No. ${c.code} ${String(c.items.length).padStart(4, "0")}</span></div>
+        <div class="visa-top"><span>${c.whole ? "Country visa" : "Visa"} · ${iso3(c.country)}</span><span>No. ${c.code} ${String(c.items.length).padStart(4, "0")}</span></div>
         <h2>${esc(c.city)}</h2>
-        <div class="where">${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">${esc(c.country)}</button>` : `<span>${esc(c.country)}</span>`}<span>${coord(c.lat,c.lon)}</span>${lt ? `<span>Local time ${lt}</span>` : ""}</div>
+        <div class="where">${c.whole ? `<span>The whole country</span>${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">Country guide</button>` : ""}` : `${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">${esc(c.country)}</button>` : `<span>${esc(c.country)}</span>`}<span>${coord(c.lat,c.lon)}</span>`}${lt ? `<span>Local time ${lt}</span>` : ""}</div>
       </div>
       <button class="close" type="button" aria-label="Close">×</button>
     </div>
@@ -585,8 +588,24 @@ function inkFor(city){
   if(!INK_OF.size) [...CITIES].sort((a, b) => a.lon - b.lon).forEach((c, i) => INK_OF.set(c.city, INKS[i % INKS.length]));
   return INK_OF.get(city) || INKS[(hash(plain(city)) >>> 3) % INKS.length];
 }
+/* A country entry stamp: wide, cut corners, double frame, the country's name large.
+   Used for whole-country mixes so they never look like a town. */
+function countryStampBody(col, name, top, bottom){
+  const M = `font-family="IBM Plex Mono,ui-monospace,monospace"`, B = `font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700"`;
+  const n = esc(plain(name).toUpperCase()), fit = n.length > 8 ? ` textLength="66" lengthAdjust="spacingAndGlyphs"` : "";
+  return `
+      <path d="M15 21H85L95 31V69L85 79H15L5 69V31Z" fill="none" stroke="${col}" stroke-width="3.6"/>
+      <path d="M17.5 25.5H82.5L90.5 33.5V66.5L82.5 74.5H17.5L9.5 66.5V33.5Z" fill="none" stroke="${col}" stroke-width="1"/>
+      <text x="50" y="34.5" text-anchor="middle" ${M} font-size="5.2" font-weight="600" letter-spacing="1.6" fill="${col}">${top}</text>
+      <path d="M16 38.5H84" stroke="${col}" stroke-width=".9"/>
+      <text x="50" y="56" text-anchor="middle" ${B} font-size="${n.length > 8 ? 15 : 18}" letter-spacing="1.8"${fit} fill="${col}">${n}</text>
+      <path d="M16 61H84" stroke="${col}" stroke-width=".9"/>
+      <path d="M19 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4" fill="none" stroke="${col}" stroke-width="1.1"/>
+      <text x="52" y="69.4" text-anchor="middle" ${M} font-size="5" font-weight="600" letter-spacing=".8" fill="${col}">${bottom}</text>
+      <path d="M74 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4" fill="none" stroke="${col}" stroke-width="1.1"/>`;
+}
 function stamp(p, size=104){
-  const h = hash(p.id), r = rng(h), rot = (r()*18 - 9).toFixed(1), v = h % 3;
+  const h = hash(p.id), r = rng(h), rot = (r()*18 - 9).toFixed(1) * (p.whole ? 0.5 : 1), v = h % 3;
   const col = inkFor(p.city);
   const d = new Date(p.added + "T12:00:00Z");
   const date = `${String(d.getUTCDate()).padStart(2,"0")} ${["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getUTCMonth()]} ${d.getUTCFullYear()}`;
@@ -594,7 +613,8 @@ function stamp(p, size=104){
   const who = p.by && COMPILERS[p.by] ? esc(plain(COMPILERS[p.by].name).toUpperCase()) : (p.who ? esc(p.who) : "RHYTHM PASSPORT");
   const M = `font-family="IBM Plex Mono,ui-monospace,monospace"`, B = `font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="600"`;
   let body;
-  if(v === 0) body = `
+  if(p.whole) body = countryStampBody(col, p.city, "ENTRY · " + iso3(p.country || p.city), date);
+  else if(v === 0) body = `
       <circle cx="50" cy="50" r="40" fill="none" stroke="${col}" stroke-width="3.2"/>
       <circle cx="50" cy="50" r="33" fill="none" stroke="${col}" stroke-width="1.2"/>
       <path id="${uid}a" d="M50 50 m-36.5 0 a36.5 36.5 0 1 1 73 0" fill="none"/>
@@ -650,7 +670,7 @@ function addPassStamp(city){
   passCount();
   const c = CITIES.find(x => x.city === city), t = $("#toast");
   if(!c || !t) return;
-  t.innerHTML = `${stamp({id:"me-" + city, city, code:c.code, added:MYPASS[city], who:"YOUR PASSPORT"}, 52)}<div><strong>Stamped: ${esc(city)}</strong><small>${passCount()} of ${CITIES.length} places in your passport</small></div>`;
+  t.innerHTML = `${stamp({id:"me-" + city, city, code:c.code, country:c.country, whole:c.whole, added:MYPASS[city], who:"YOUR PASSPORT"}, 52)}<div><strong>Stamped: ${esc(city)}</strong><small>${passCount()} of ${CITIES.length} places in your passport</small></div>`;
   t.hidden = false; t.classList.remove("out");
   clearTimeout(addPassStamp.t); addPassStamp.t = setTimeout(() => { t.classList.add("out"); setTimeout(() => { t.hidden = true; }, 450); }, 3200);
 }
@@ -668,7 +688,7 @@ function openPassport(){
     </div>
     <div class="panel-body">
       <div class="pass-count"><div><span class="label">Places</span><strong>${got.length}<small style="font-size:13px;color:var(--muted)"> / ${CITIES.length}</small></strong></div><div><span class="label">Countries</span><strong>${countries}</strong></div></div>
-      ${got.length ? `<div class="stamps-grid">${got.map(c => `<button class="stampcard" type="button" data-city="${esc(c.city)}">${stamp({id:"me-" + c.city, city:c.city, code:c.code, added:MYPASS[c.city], who:"YOUR PASSPORT"}, 120)}<small>${esc(c.city)}<br>${dateLabel(MYPASS[c.city])}</small></button>`).join("")}</div>`
+      ${got.length ? `<div class="stamps-grid">${got.map(c => `<button class="stampcard" type="button" data-city="${esc(c.city)}">${stamp({id:"me-" + c.city, city:c.city, code:c.code, country:c.country, whole:c.whole, added:MYPASS[c.city], who:"YOUR PASSPORT"}, 120)}<small>${esc(c.city)}<br>${dateLabel(MYPASS[c.city])}</small></button>`).join("")}</div>`
         : `<div class="empty"><strong>No stamps yet</strong><p>Play a mix or playlist from any place and it gets stamped here.</p></div>`}
       ${left.length ? `<div><div class="label" style="margin-bottom:10px">Still to visit</div><div class="stamps-grid">${left.map(c => `<button class="stampcard empty-slot" type="button" data-city="${esc(c.city)}"><span class="slot">${esc(c.city)}</span></button>`).join("")}</div></div>` : ""}
       <p class="deck-note">Stamps are kept in this browser only.</p>

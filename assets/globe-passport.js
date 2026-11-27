@@ -119,6 +119,9 @@ function labelEl(d){
       // the country's own entry stamp, after the real ones: shape, ink, lettering
       el.classList.add("real"); d.nat = 56; d.aspect = real.h / real.w;
       s.innerHTML = `<svg viewBox="0 0 ${real.w} ${real.h}" width="56" height="${(56 * real.h / real.w).toFixed(1)}" aria-label="${label}">${real.body}</svg><em>${esc(d.text)}</em>`;
+      // a paper card in the stamp's own outline, so the ink reads on any map
+      const sv = s.querySelector("svg"), outer = sv.querySelector("g > :first-child");
+      if(outer){ const u = outer.cloneNode(); u.setAttribute("class", "paper"); u.removeAttribute("stroke-dasharray"); sv.insertBefore(u, sv.firstChild); }
     } else {
       d.nat = 50; d.aspect = 0.56;
       const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 6 ? ` textLength="72" lengthAdjust="spacingAndGlyphs"` : "";

@@ -54,7 +54,10 @@ const CITIES = d3.groups(PLAYLISTS, p=>p.city).map(([city, items]) => {
   return c;
 });
 COUNTRY.forEach(k => { [k.lon, k.lat] = k.centroid; });
-$("#stats").textContent = `${PLAYLISTS.length} mixes and playlists · ${CITIES.length} places · ${new Set(PLAYLISTS.map(p=>p.by)).size} selectors`;
+{ // one sentence that explains the site, numbers included
+  const nm = PLAYLISTS.length, ns = new Set(PLAYLISTS.map(p=>p.by)).size, np = CITIES.length;
+  $("#stats").textContent = `${nm} ${nm === 1 ? "mix or playlist" : "mixes and playlists"} by ${ns} ${ns === 1 ? "selector" : "selectors"}, pinned to the ${np === 1 ? "place its" : np + " places their"} music comes from.`;
+}
 
 /* ---------- Globe: satellite imagery in WebGL ---------- */
 const app = $("#app");
@@ -458,11 +461,11 @@ function countryGuide(name){
 function openCountry(k){
   activeCountry = k; activeCity = null;
   const cities = CITIES.filter(c => c.ci === k).sort((a,b)=>b.items.length - a.items.length);
-  const pls = cities.flatMap(c => c.items);
+  const pls = cities.flatMap(c => c.items), guide = countryGuide(k.name);
   openPanel(`
     <div class="panel-head">
       <div><h2>${esc(k.name)}</h2>
-        <div class="where"><span>${pls.length} ${pls.length===1?"mix or playlist":"mixes and playlists"}</span><span>${cities.length} place${cities.length===1?"":"s"}</span></div></div>
+        ${cities.length ? `<div class="where"><span>${pls.length} ${pls.length===1?"mix or playlist":"mixes and playlists"}</span><span>${cities.length} place${cities.length===1?"":"s"}</span></div>` : ""}</div>
       <button class="close" type="button" aria-label="Close">×</button>
     </div>
     <div class="panel-body">
@@ -471,8 +474,11 @@ function openCountry(k){
           <div class="cities">${cities.map(c=>`<button class="citybtn" type="button" data-city="${esc(c.city)}">${esc(c.city)} <small>${c.items.length}</small></button>`).join("")}</div></div>
         <div><div class="label" style="margin-bottom:8px">All mixes and playlists from ${esc(k.name)}</div>
           <div class="list">${pls.map(p=>`<button class="item" type="button" data-id="${p.id}">${stamp(p,52)}<span><span class="item-title">${esc(p.title)}</span><br><span class="item-sub">${esc(COMPILERS[p.by].name)} · ${esc(p.city)}</span></span><span class="item-dur">${durLabel(p.dur)}</span></button>`).join("")}</div></div>`
-      : `<div class="empty"><strong>Nothing from ${esc(k.name)} yet</strong><p>No selector has pinned a mix or playlist here so far. On the live site, this is where a selector from ${esc(k.name)} would be invited to add the first one.</p></div>`}
-      ${countryGuide(k.name)}
+      : ""}
+      ${guide}
+      ${cities.length ? "" : guide
+        ? `<p class="empty-line">No mixes from ${esc(k.name)} yet. <a href="submit/">Send the first one</a></p>`
+        : `<div class="empty"><strong>Nothing from ${esc(k.name)} yet</strong><p>No selector has pinned a mix or playlist here so far. <a href="submit/">Send the first one</a>.</p></div>`}
     </div>`);
   $("#panel").querySelectorAll("[data-city]").forEach(b => b.onclick = () => openCity(b.dataset.city));
   $("#panel").querySelectorAll(".item").forEach(b => b.onclick = () => { const p = byId(b.dataset.id); openCity(p.city, p.id); });
@@ -1291,6 +1297,29 @@ function visitorCity(){
   const name = (tz.split("/").pop() || "Home").replace(/_/g, " ");
   return {name, code: code3(name) || "HOM"};
 }
+/* On arrival, with nothing asked for in the address: after a moment the globe turns slowly to one mix
+   from the visitor's half of the world and a card offers to play it, so nobody misses the boarding pass. */
+function featureOnArrival(){
+  if(location.hash || introOn || isOpen() || current) return;
+  const sd = visitorSide(), pool = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0), list = pool.length ? pool : PLAYLISTS;
+  const p = list[Math.floor(Math.random() * list.length)]; if(!p) return;
+  const by = COMPILERS[p.by] ? COMPILERS[p.by].name : "";
+  const card = document.createElement("div"); card.className = "feature"; card.setAttribute("role", "region"); card.setAttribute("aria-label", "Featured mix");
+  card.innerHTML = `<div class="feature-text"><span class="feature-eyebrow">Now boarding · ${esc(p.city)}</span><strong>${esc(p.title)}</strong><small>${esc(by)}${p.dur ? " · " + durLabel(p.dur) : ""}</small></div>
+    <button class="feature-play btn primary small" type="button">▶ Play</button><button class="feature-x" type="button" aria-label="Close">×</button>`;
+  const h = $("#hint"), hv = h && !h.hidden; app.appendChild(card); if(h) h.hidden = true;
+  const gone = () => { card.remove(); };
+  card.querySelector(".feature-x").onclick = () => { gone(); if(hv && !current) h.hidden = false; };
+  card.querySelector(".feature-play").onclick = () => { gone(); openCity(p.city, p.id); playMix(p); };
+  if(!reduce){
+    lastInteract = performance.now() + 7000;   // hold the idle spin while the globe turns
+    const pov = world.pointOfView();
+    world.pointOfView({lat: Math.max(-50, Math.min(55, p.lat)) * 0.7, lng: p.lon, altitude: Math.max(1.5, Math.min(pov.altitude, 2.1))}, 6500);
+  }
+  // the card goes once the visitor opens something or starts playing
+  const watch = setInterval(() => { if(current || isOpen()){ gone(); clearInterval(watch); } }, 500);
+}
+setTimeout(featureOnArrival, 2200);
 function startLanding(){
   const sd = visitorSide(), pool = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0);
   const p = pool[Math.floor(Math.random()*pool.length)];

@@ -482,10 +482,6 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 
 /* A group of nearby places: one stamp with the number of places, stacked like a pile of stamps */
 .glabel.city .cnt{display:none}
-.glabel.city.grp .cnt{display:flex;position:absolute;left:0;top:0;width:34px;height:34px;align-items:center;justify-content:center;font:800 13px/1 "IBM Plex Mono",ui-monospace,monospace;color:#24324a;text-shadow:none;pointer-events:none}
-.glabel.city.grp span{--ink:#24324a!important;color:transparent!important;text-shadow:none!important;cursor:zoom-in}
-.glabel.city.grp .pm text{visibility:hidden}
-.glabel.city.grp .pm{filter:drop-shadow(3px -3px 0 #ece3d2) drop-shadow(0 0 .6px #24324a) drop-shadow(3px -3px 0 #e3d9c6) drop-shadow(0 1px 3px rgba(0,0,0,.55))}
 
 .glabel.city.noname span{color:transparent!important;text-shadow:none!important}
 
@@ -493,7 +489,6 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city span{left:-13px;top:-13px}
 .glabel.city .pm{width:26px;height:26px}
 .glabel.city .pm text{font-size:8px}
-.glabel.city.grp .cnt{width:26px;height:26px;font-size:11px}
 
 /* A group is one clean stamp with the number of places, nothing behind it */
 .glabel.city.grp .pm{filter:drop-shadow(0 1px 3px rgba(0,0,0,.55))!important}
@@ -531,3 +526,8 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 /* A country with no mixes yet: the guide leads, this one line sits under it */
 .empty-line{margin:4px 0 0;font-size:12.5px;color:var(--muted)}
 .empty-line a,.empty p a{color:var(--accent)}
+/* Places too close to separate: the stamps of the others sit stacked behind the front one */
+.glabel.city.grp span{color:transparent!important;text-shadow:none!important;cursor:zoom-in}
+.glabel.city .stk{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+.glabel.city .stk .pm{position:absolute;left:0;top:0;opacity:1}
+.glabel.city.grp > span > .pm{position:relative;z-index:1}

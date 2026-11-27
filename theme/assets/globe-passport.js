@@ -97,6 +97,11 @@ function fitBox(d){
   return {hw: Math.max(lo, 0.3)};
 }
 function hasStamp(city){ try { return !!MYPASS[city]; } catch(e){ return false; } }
+/* A town's pin: its country's stamp shape and ink when we have them, the round stamp otherwise */
+function pinOf(c){
+  const real = window.WORSTAMP && WORSTAMP.pin(c.country, c.code);
+  return real || {ink: inkFor(c.city), svg: `<circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(c.code)}</text>`};
+}
 function labelEl(d){
   if(d.el) return d.el;
   const el = document.createElement("div"), s = document.createElement("span");
@@ -104,9 +109,9 @@ function labelEl(d){
   if(d.kind === "city"){
     const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
     // the pin takes the shape and ink of its country's real entry stamp, when we have it
-    const real = window.WORSTAMP && WORSTAMP.pin(d.c.country, d.c.code);
-    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)">${real ? real.svg : `<circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text>`}</svg>`);
-    const ink = real ? real.ink : inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
+    const pin = pinOf(d.c);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)">${pin.svg}</svg>`);
+    const ink = pin.ink; s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
     s.insertAdjacentHTML("beforeend", '<b class="cnt"></b>');
   }
@@ -435,7 +440,17 @@ function tidyLabels(){
   for(const d of data) if(d.kind === "city" && d.el){
     const n = d.members ? d.members.length : 0, grp = n > 1;
     d.el.classList.toggle("grp", grp);
-    if(grp){ const b = d.el.querySelector(".cnt"); if(b) b.textContent = n; }
+    // places too close to separate: their own stamps, stacked one on another (up to three), no number badge
+    const key = grp ? d.members.map(m => m.c.city).join("|") : "";
+    if(d.stackKey !== key){
+      d.stackKey = key; const s = d.el.firstChild; let st = s.querySelector(".stk");
+      if(!grp){ if(st) st.remove(); }
+      else {
+        if(!st){ st = document.createElement("i"); st.className = "stk"; s.insertBefore(st, s.firstChild); }
+        st.innerHTML = d.members.filter(m => m !== d).slice(0, 2).map((m, i) => { const pn = pinOf(m.c), r = ((hash(m.c.city) % 15) - 7) + (i ? 9 : -6);
+          return `<svg class="pm" viewBox="0 0 30 30" style="--ink:${pn.ink};transform:translate(${i ? 9 : 5}px,${i ? -8 : -4}px) rotate(${r}deg)">${pn.svg}</svg>`; }).reverse().join("");
+      }
+    }
   }
   for(const d of heads){
     const nb = [d.sx + 16, d.sy - 8, d.sx - 13 + d.w, d.sy + 8];

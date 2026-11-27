@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function wort_text_fields() {
 	return array(
 		// Globe page.
-		'search'        => array( 'Search a place, country, mix, playlist or selector', 'Search box placeholder', 'wort_globe' ),
+		'search'        => array( 'Search a place, style, mix or selector', 'Search box placeholder', 'wort_globe' ),
 		'passport'      => array( 'Your passport', '"Your passport" button', 'wort_globe' ),
 		'random'        => array( '◉ Play something random', '"Play something random" button', 'wort_globe' ),
 		'hint_center'   => array( 'Tap a stamp to fly there', 'Hint at the bottom centre', 'wort_globe' ),

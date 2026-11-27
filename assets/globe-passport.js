@@ -565,6 +565,36 @@ function openCountry(k){
   flyTo(k);
 }
 
+/* A music style or genre: every mix tagged with it, wherever it is pinned */
+/* Tags hold styles, the country and artists. A tag that names a country or a place is not a style. */
+const NOT_STYLE = new Set([...COUNTRY.map(k => k.name), ...CITIES.flatMap(c => [c.city, c.country])].filter(Boolean).map(x => plain(String(x).toLowerCase().trim())));
+const styleTags = p => p.genres.filter(g => !NOT_STYLE.has(plain(g.toLowerCase().trim())));
+const STYLES = (() => { const m = new Map();
+  PLAYLISTS.forEach(p => styleTags(p).forEach(g => { const k = plain(g.toLowerCase().trim()); if(!k) return; if(!m.has(k)) m.set(k, {name: g.trim(), items: []}); const st = m.get(k); st.items.push(p);
+    if(/^[A-ZÀ-Þ]/.test(g.trim()) && !/^[A-ZÀ-Þ]/.test(st.name)) st.name = g.trim(); }));   // prefer the capitalised spelling
+  m.forEach(st => { st.name = st.name.charAt(0).toUpperCase() + st.name.slice(1); });
+  return m; })();
+function styleOf(g){ return STYLES.get(plain(String(g).toLowerCase().trim())); }
+function openStyle(g){
+  const st = styleOf(g); if(!st) return;
+  activeCountry = null; activeCity = null;
+  const pls = st.items, places = [...new Set(pls.map(p => p.city))];
+  openPanel(`
+    <div class="panel-head">
+      <div><div class="visa-top"><span>Style</span></div><h2>${esc(st.name)}</h2>
+        <div class="where"><span>${pls.length} ${pls.length===1?"mix or playlist":"mixes and playlists"}</span><span>${places.length} place${places.length===1?"":"s"}</span></div></div>
+      <button class="close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="panel-body">
+      <div><div class="label" style="margin-bottom:8px">Where it is pinned</div>
+        <div class="cities">${places.map(c => `<button class="citybtn" type="button" data-city="${esc(c)}">${esc(c)} <small>${pls.filter(p => p.city === c).length}</small></button>`).join("")}</div></div>
+      <div><div class="label" style="margin-bottom:8px">${esc(st.name)} mixes and playlists</div>
+        <div class="list">${pls.map(p=>`<button class="item" type="button" data-id="${p.id}">${stamp(p,52)}<span><span class="item-title">${esc(p.title)}</span><br><span class="item-sub">${esc(COMPILERS[p.by].name)} · ${esc(p.city)}</span></span><span class="item-dur">${durLabel(p.dur)}</span></button>`).join("")}</div></div>
+    </div>`);
+  $("#panel").querySelectorAll("[data-city]").forEach(b => b.onclick = () => openCity(b.dataset.city));
+  $("#panel").querySelectorAll(".item").forEach(b => b.onclick = () => { const p = byId(b.dataset.id); openCity(p.city, p.id); });
+  updatePinClasses(); updateNow(); dirty = true;
+}
 const slugOf = s => plain(String(s)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 function cityGuide(name){
   const g = CITY_INFO[name]; if(!g) return "";
@@ -624,7 +654,7 @@ function showPlaylist(id, autoplay){
         </div>
       </div>
       <div class="meta"><span>${durLabel(p.dur)}</span><span>${p.tracks} tracks</span><span>Added ${dateLabel(p.added)}</span></div>
-      <div class="chips">${p.genres.map(g=>`<span class="chip">${esc(g)}</span>`).join("")}</div>
+      <div class="chips">${p.genres.map(g=>`<button class="chip" type="button" data-style="${esc(g)}">${esc(g)}</button>`).join("")}${(p.tags || []).map(g=>`<span class="chip tag">${esc(g)}</span>`).join("")}</div>
       <p class="desc">${esc(p.desc)}</p>
       <div class="actions">
         <button class="btn primary" type="button" id="playThis">${on ? "Playing now" : "Board ▶"}</button>
@@ -633,6 +663,7 @@ function showPlaylist(id, autoplay){
       </div>
       ${p.mixcloud ? "" : `<p class="deck-note">Demo audio: Rhythm Passport Vol.1 by DJ Ni Mo stands in until this playlist's own Mixcloud link is added.</p>`}
     </div>`;
+  $("#panel").querySelectorAll("[data-style]").forEach(b => b.onclick = () => openStyle(b.dataset.style));
   $("#playThis").onclick = () => { BOARDING = null; $("#bar-show").textContent = "Show on globe"; $("#bar-show").classList.remove("primary"); playMix(p); $("#playThis").textContent = "Playing now"; };
   if(autoplay && !(current && current.id === p.id)) boardingPass(p);
 }
@@ -813,7 +844,7 @@ function openProfile(slug){
   updateNow();
 }
 function closeProfile(){ $("#profile").hidden = true; }
-function route(){ const h = location.hash.slice(1); if(h === "random"){ closeProfile(); if(!introOn) showRecord(); return; } if(h.startsWith("city-")){ closeProfile(); const cc = CITIES.find(x => slugOf(x.city) === h.slice(5)); if(cc) openCity(cc.city); return; } if(h.startsWith("compiler-")) openProfile(h.slice(9)); else closeProfile(); }
+function route(){ const h = location.hash.slice(1); if(h === "random"){ closeProfile(); if(!introOn) showRecord(); return; } if(h.startsWith("city-")){ closeProfile(); const cc = CITIES.find(x => slugOf(x.city) === h.slice(5)); if(cc) openCity(cc.city); return; } if(h.startsWith("style-")){ closeProfile(); const st = [...STYLES.values()].find(x => slugOf(x.name) === h.slice(6)); if(st) openStyle(st.name); return; } if(h.startsWith("compiler-")) openProfile(h.slice(9)); else closeProfile(); }
 window.addEventListener("hashchange", route);
 
 /* ---------- Search ---------- */
@@ -822,9 +853,12 @@ q.addEventListener("input", () => {
   const t = plain(q.value.trim().toLowerCase());
   if(!t){ results.hidden = true; return; }
   const m = s => plain(s.toLowerCase()).includes(t), hits = [];
+  [...STYLES.values()].filter(st => m(st.name)).sort((a, b) => b.items.length - a.items.length).forEach(st => {
+    const np = new Set(st.items.map(p => p.city)).size;
+    hits.push({label: st.name, sub: `Style · ${st.items.length} mix${st.items.length > 1 ? "es" : ""} in ${np} place${np > 1 ? "s" : ""}`, go: () => openStyle(st.name)}); });
   COUNTRY.forEach(k=>{ if(m(k.name)){ const n = CITIES.filter(c=>c.ci===k).reduce((a,c)=>a+c.items.length,0); hits.push({label:k.name,sub:`Country · ${n}`,go:()=>openCountry(k)}); } });
   CITIES.forEach(c=>{ if(m(c.city)) hits.push({label:c.city,sub:`${c.items.length} ${c.items.length>1?"mixes and playlists":"mix or playlist"}`,go:()=>openCity(c.city)}); });
-  PLAYLISTS.forEach(p=>{ if(m(p.title)||m(p.genres.join(" "))) hits.push({label:p.title,sub:p.city,go:()=>openCity(p.city,p.id)}); });
+  PLAYLISTS.forEach(p=>{ if(m(p.title)||m(p.genres.join(" "))||m((p.tags || []).join(" "))) hits.push({label:p.title,sub:`${p.city}${styleTags(p).length ? " · " + styleTags(p).slice(0, 2).join(", ") : ""}`,go:()=>openCity(p.city,p.id)}); });
   Object.entries(COMPILERS).forEach(([s,c])=>{ if(m(c.name)) hits.push({label:c.name,sub:"Selector",go:()=>{location.hash="compiler-"+s}}); });
   results.innerHTML = hits.length ? hits.slice(0,10).map((h,i)=>`<button type="button" data-i="${i}"><span>${esc(h.label)}</span><small>${esc(h.sub)}</small></button>`).join("") : `<div style="padding:10px 12px;color:var(--muted);font-size:12px">Nothing found for “${esc(q.value)}”.</div>`;
   results.hidden = false;
@@ -1439,16 +1473,15 @@ function featureOnArrival(){
   const sd = visitorSide(), mine = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0), rest = PLAYLISTS.filter(p => !mine.includes(p));
   const shuffle = a => a.map(x => [Math.random(), x]).sort((u, v) => u[0] - v[0]).map(x => x[1]);
   const list = shuffle(mine).concat(shuffle(rest)).slice(0, 12); if(!list.length) return;
-  const now = new Date(), t0 = Math.ceil((now.getHours() * 60 + now.getMinutes() + 3) / 5) * 5;
-  const hhmm = m => { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+  const now = new Date(), hhmm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
   const flap = (txt, cls = "") => `<span class="fl ${cls}">${[...txt].map((ch, i) => `<b data-c="${esc(ch)}" style="--d:${i * 45}ms">${ch === " " ? "&nbsp;" : esc(ch)}</b>`).join("")}</span>`;
   const rows = list.map((p, i) => { const dest = CITIES.find(x => x.city === p.city), comp = COMPILERS[p.by] || {name: ""};
     return `<button class="dep-row" type="button" data-id="${p.id}" style="--r:${i}">
-      ${flap(hhmm(t0 + i * 10), "dep-time")}${flap((dest ? dest.code : code3(p.city)).padEnd(3, " "), "dep-code")}
-      <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${esc(p.city)} · Capt. ${esc(comp.name)}</small></span>
-      <span class="dep-st">${i === 0 ? "BOARDING" : i < 3 ? "ON TIME" : "SCHEDULED"}</span></button>`; }).join("");
+      ${flap(localTime(dest && dest.tz) || hhmm(((now.getUTCHours() * 60 + now.getUTCMinutes() + Math.round(p.lon / 15) * 60) % 1440 + 1440) % 1440), "dep-time")}${flap((dest ? dest.code : code3(p.city)).padEnd(3, " "), "dep-code")}
+      <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${styleTags(p).length ? `<em>${styleTags(p).slice(0, 2).map(esc).join(" · ")}</em> · ` : ""}${esc(p.city)}</small></span>
+      ${i === 0 ? `<span class="dep-st">BOARDING</span>` : ""}</button>`; }).join("");
   const board = document.createElement("section"); board.className = "deps"; board.setAttribute("aria-label", "Departures");
-  board.innerHTML = `<div class="deps-head"><span>Departures</span><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
+  board.innerHTML = `<div class="deps-head"><button class="deps-fold" type="button" aria-expanded="true">Departures <small>local time there</small><i aria-hidden="true">▾</i></button><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
   app.appendChild(board); const h = $("#hint"), hv = h && !h.hidden; if(h) h.hidden = true;
   // the split-flap letters riffle through the alphabet before they settle
   if(!reduce){
@@ -1463,6 +1496,11 @@ function featureOnArrival(){
     requestAnimationFrame(tick);
   }
   const gone = () => board.remove();
+  // the board folds down to its title as soon as the visitor starts exploring the globe; tapping the title opens it again
+  const fold = on => { board.classList.toggle("folded", on); board.querySelector(".deps-fold").setAttribute("aria-expanded", on ? "false" : "true"); };
+  board.querySelector(".deps-fold").onclick = () => fold(!board.classList.contains("folded"));
+  const gv = document.getElementById("globeViz"), explore = () => fold(true);
+  gv.addEventListener("pointerdown", explore, {passive: true}); gv.addEventListener("wheel", explore, {passive: true});
   board.querySelector(".deps-x").onclick = () => { gone(); if(hv && !current) h.hidden = false; };
   board.querySelectorAll(".dep-row").forEach(r => r.onclick = () => { const p = byId(r.dataset.id); openCity(p.city, p.id); boardingPass(p); });
   const p = list[0];

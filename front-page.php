@@ -83,7 +83,7 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		'World on Rotation'                                            => esc_html( get_bloginfo( 'name' ) ),
 		'Your Rhythm Passport to everywhere'                           => esc_html( get_bloginfo( 'description' ) ),
 		'Music... It Means the World To Us!'                           => esc_html( wort_motto() ),
-		'placeholder="Search a place, country, mix, playlist or selector"' => 'placeholder="' . esc_attr( wort_t( 'search' ) ) . '"',
+		'placeholder="Search a place, style, mix or selector"' => 'placeholder="' . esc_attr( wort_t( 'search' ) ) . '"',
 		'Your passport · <b'                                           => $wort_e( 'passport' ) . ' · <b',
 		'◉ Play something random'                                      => $wort_e( 'random' ),
 		'>Drag to spin · scroll to zoom · tap a country<'              => '>' . $wort_e( 'hint_bottom' ) . '<',

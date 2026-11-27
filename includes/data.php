@@ -136,6 +136,7 @@ function wor_data() {
 		$pl     = $places[ $place_by[ $place_id ] ];
 		$added  = (string) wor_meta( $m->ID, 'added' );
 		$genres = array_values( array_filter( array_map( 'trim', explode( ',', (string) wor_meta( $m->ID, 'genres' ) ) ) ) );
+		$others = array_values( array_filter( array_map( 'trim', explode( ',', (string) wor_meta( $m->ID, 'tags' ) ) ) ) );
 		$uid    = (string) wor_meta( $m->ID, 'uid' );
 		$item   = array(
 			'id'       => $uid ? $uid : $m->post_name,
@@ -152,6 +153,7 @@ function wor_data() {
 			'dur'      => 60 * (int) wor_meta( $m->ID, 'minutes' ),
 			'tracks'   => (int) wor_meta( $m->ID, 'tracks' ),
 			'genres'   => $genres,
+			'tags'     => $others,
 			'added'    => $added ? $added : get_the_date( 'Y-m-d', $m ),
 			'desc'     => wp_strip_all_tags( implode( ' ', wor_content_paras( $m ) ) ),
 			'mixcloud' => wor_mixcloud_feed( wor_meta( $m->ID, 'mixcloud' ) ),
@@ -182,7 +184,7 @@ function wor_globe_data() {
 	$d     = wor_data();
 	$small = array();
 	foreach ( $d['P'] as $p ) {
-		$row            = array_intersect_key( $p, array_flip( array( 'id', 'slug', 'city', 'country', 'lat', 'lon', 'tz', 'whole', 'title', 'by', 'dur', 'tracks', 'genres', 'added', 'desc', 'mixcloud', 'spotify' ) ) );
+		$row            = array_intersect_key( $p, array_flip( array( 'id', 'slug', 'city', 'country', 'lat', 'lon', 'tz', 'whole', 'title', 'by', 'dur', 'tracks', 'genres', 'tags', 'added', 'desc', 'mixcloud', 'spotify' ) ) );
 		$row['country'] = wor_globe_country_name( $row['country'] );
 		$small[]        = $row;
 	}

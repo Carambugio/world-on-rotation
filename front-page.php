@@ -30,19 +30,25 @@ $wort_data['sky']   = function_exists( 'wor_sky_data' ) ? wor_sky_data() : array
 $wort_data['v']     = $wort_ver;
 $wort_data['t']     = wort_t_all();
 
-// The passport design is the main one. ?design=current shows the earlier satellite design: anyone can open it,
-// editors also get the choice remembered for 30 days (?design=passport switches back).
-$wort_design = 'passport';
-$wort_q      = isset( $_GET['design'] ) ? sanitize_key( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+// The passport design is the main one. Two others stay one link away:
+// ?design=current is the earlier satellite design, ?design=cream is the passport design on the plain cream land.
+// Anyone can open them; editors also get the choice remembered for 30 days (?design=passport switches back).
+$wort_designs = array( 'passport' => 'passport', 'current' => '', 'cream' => 'cream' );
+$wort_design  = 'passport';
+$wort_q       = isset( $_GET['design'] ) ? sanitize_key( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 if ( current_user_can( 'edit_posts' ) ) {
-	if ( '' !== $wort_q ) {
-		$wort_design = 'current' === $wort_q ? '' : 'passport';
-		setcookie( 'wor_design', $wort_design ? '' : 'current', $wort_design ? time() - 3600 : time() + 30 * DAY_IN_SECONDS, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
-	} elseif ( isset( $_COOKIE['wor_design'] ) && 'current' === $_COOKIE['wor_design'] ) {
-		$wort_design = '';
+	if ( isset( $wort_designs[ $wort_q ] ) ) {
+		$wort_design = $wort_designs[ $wort_q ];
+		$wort_keep   = 'passport' === $wort_q ? '' : $wort_q;
+		setcookie( 'wor_design', $wort_keep, $wort_keep ? time() + 30 * DAY_IN_SECONDS : time() - 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+	} elseif ( isset( $_COOKIE['wor_design'] ) && isset( $wort_designs[ sanitize_key( wp_unslash( $_COOKIE['wor_design'] ) ) ] ) ) {
+		$wort_design = $wort_designs[ sanitize_key( wp_unslash( $_COOKIE['wor_design'] ) ) ];
 	}
-} elseif ( 'current' === $wort_q ) {
-	$wort_design = '';
+} elseif ( isset( $wort_designs[ $wort_q ] ) ) {
+	$wort_design = $wort_designs[ $wort_q ];
+}
+if ( 'cream' === $wort_design ) {
+	$wort_data['land'] = 'land-cream';
 }
 $wort_globe = $wort_design ? 'globe-passport' : 'globe';
 ?><!doctype html>
@@ -81,7 +87,7 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		'Your passport · <b'                                           => $wort_e( 'passport' ) . ' · <b',
 		'◉ Play something random'                                      => $wort_e( 'random' ),
 		'>Drag to spin · scroll to zoom · tap a country<'              => '>' . $wort_e( 'hint_bottom' ) . '<',
-		'>Tap a pin or a country<'                                     => '>' . $wort_e( 'hint_center' ) . '<',
+		'>Tap a stamp to fly there<'                                   => '>' . $wort_e( 'hint_center' ) . '<',
 		'<p>A random mix from your side of the world, playing now</p>' => '<p>' . $wort_e( 'intro_line' ) . '</p>',
 		'>Open the globe<'                                             => '>' . $wort_e( 'intro_button' ) . '<',
 		"If it doesn't start by itself, press play."                   => $wort_e( 'player_note' ),
@@ -94,12 +100,12 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js"></script>
-<script src="<?php echo esc_url( $wort_uri . '/assets/geo.js?ver=' . $wort_ver ); ?>"></script>
-<script>window.WOR = <?php echo wp_json_encode( $wort_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); ?>;</script>
-<script src="<?php echo esc_url( $wort_uri . '/assets/stamps.js?ver=' . $wort_ver ); ?>"></script>
-<script src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
-<?php if ( ! $wort_design ) : ?>
-<a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none">Earlier design · back to the new one</a>
+<script data-no-optimize="1" data-no-minify="1" data-cfasync="false" src="<?php echo esc_url( $wort_uri . '/assets/geo.js?ver=' . $wort_ver ); ?>"></script>
+<script data-no-optimize="1" data-no-minify="1" data-cfasync="false">window.WOR = <?php echo wp_json_encode( $wort_data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ); ?>;</script>
+<script data-no-optimize="1" data-no-minify="1" data-cfasync="false" src="<?php echo esc_url( $wort_uri . '/assets/stamps.js?ver=' . $wort_ver ); ?>"></script>
+<script data-no-optimize="1" data-no-minify="1" data-cfasync="false" src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
+<?php if ( 'passport' !== $wort_design ) : ?>
+<a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none"><?php echo 'cream' === $wort_design ? 'Cream version' : 'Earlier design'; ?> · back to the new one</a>
 <?php endif; ?>
 <?php wp_footer(); ?>
 </body>

@@ -15,7 +15,7 @@ function wort_text_fields() {
 		'search'        => array( 'Search a place, country, mix, playlist or selector', 'Search box placeholder', 'wort_globe' ),
 		'passport'      => array( 'Your passport', '"Your passport" button', 'wort_globe' ),
 		'random'        => array( '◉ Play something random', '"Play something random" button', 'wort_globe' ),
-		'hint_center'   => array( 'Tap a pin or a country', 'Hint at the bottom centre', 'wort_globe' ),
+		'hint_center'   => array( 'Tap a stamp to fly there', 'Hint at the bottom centre', 'wort_globe' ),
 		'hint_bottom'   => array( 'Drag to spin · scroll to zoom · tap a country', 'Hint at the bottom left', 'wort_globe' ),
 		'intro_line'    => array( 'A random mix from your side of the world, playing now', 'Random-mix screen: line under the name', 'wort_globe' ),
 		'intro_button'  => array( 'Open the globe', 'Random-mix screen: button', 'wort_globe' ),

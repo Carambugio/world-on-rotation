@@ -34,6 +34,12 @@ function wort_assets() {
 }
 add_action( 'wp_enqueue_scripts', 'wort_assets' );
 
+/** Keep page optimisers from minifying the stamp script: a naive minifier eats the spaces inside its text templates. */
+function wort_no_optimize( $tag, $handle ) {
+	return 'wort-stamps' === $handle ? str_replace( '<script ', '<script data-no-optimize="1" data-no-minify="1" data-cfasync="false" ', $tag ) : $tag;
+}
+add_filter( 'script_loader_tag', 'wort_no_optimize', 10, 2 );
+
 /** The globe fills the screen: no admin bar on top of it. */
 function wort_admin_bar( $show ) {
 	return is_front_page() ? false : $show;

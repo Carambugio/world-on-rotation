@@ -531,6 +531,3 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city .stk{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .glabel.city .stk .pm{position:absolute;left:0;top:0;opacity:1}
 .glabel.city.grp > span > .pm{position:relative;z-index:1}
-/* Passport page version: the globe printed on paper, a double ink rule round the page like a visa page */
-.on-page #globeViz::after{content:"";position:absolute;inset:14px;border:1.5px solid rgba(49,62,80,.35);outline:1px solid rgba(49,62,80,.25);outline-offset:-6px;border-radius:6px;pointer-events:none;z-index:1}
-.on-page :is(.brand,.panel,.zoom,.proto,.hint,.now,.results,.profile,.bar,.feature){--panel:rgba(24,30,40,.94)}

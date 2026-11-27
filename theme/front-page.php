@@ -31,10 +31,9 @@ $wort_data['v']     = $wort_ver;
 $wort_data['t']     = wort_t_all();
 
 // The passport design is the main one. Two others stay one link away:
-// ?design=current is the earlier satellite design, ?design=cream is the passport design on the plain cream land,
-// ?design=page puts the globe on a passport page instead of in space.
+// ?design=current is the earlier satellite design, ?design=cream is the passport design on the plain cream land.
 // Anyone can open them; editors also get the choice remembered for 30 days (?design=passport switches back).
-$wort_designs = array( 'passport' => 'passport', 'current' => '', 'cream' => 'cream', 'page' => 'page' );
+$wort_designs = array( 'passport' => 'passport', 'current' => '', 'cream' => 'cream' );
 $wort_design  = 'passport';
 $wort_q       = isset( $_GET['design'] ) ? sanitize_key( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 if ( current_user_can( 'edit_posts' ) ) {
@@ -50,9 +49,6 @@ if ( current_user_can( 'edit_posts' ) ) {
 }
 if ( 'cream' === $wort_design ) {
 	$wort_data['land'] = 'land-cream';
-}
-if ( 'page' === $wort_design ) {
-	$wort_data['page'] = 1; // the globe printed on a passport page instead of floating in space
 }
 $wort_globe = $wort_design ? 'globe-passport' : 'globe';
 ?><!doctype html>
@@ -109,7 +105,7 @@ echo strtr( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 <script data-no-optimize="1" data-no-minify="1" data-cfasync="false" src="<?php echo esc_url( $wort_uri . '/assets/stamps.js?ver=' . $wort_ver ); ?>"></script>
 <script data-no-optimize="1" data-no-minify="1" data-cfasync="false" src="<?php echo esc_url( $wort_uri . '/assets/' . $wort_globe . '.js?ver=' . $wort_ver ); ?>"></script>
 <?php if ( 'passport' !== $wort_design ) : ?>
-<a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none"><?php echo 'cream' === $wort_design ? 'Cream version' : ( 'page' === $wort_design ? 'Passport page version' : 'Earlier design' ); ?> · back to the new one</a>
+<a href="<?php echo esc_url( home_url( '/' ) . ( current_user_can( 'edit_posts' ) ? '?design=passport' : '' ) ); ?>" style="position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:99;padding:6px 12px;border-radius:999px;background:#a3302b;color:#fff;font:600 12px/1.2 'IBM Plex Mono',monospace;letter-spacing:.04em;text-decoration:none"><?php echo 'cream' === $wort_design ? 'Cream version' : 'Earlier design'; ?> · back to the new one</a>
 <?php endif; ?>
 <?php wp_footer(); ?>
 </body>

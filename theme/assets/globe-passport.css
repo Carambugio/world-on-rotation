@@ -531,3 +531,34 @@ h3.sec{margin:0 0 12px;font-family:var(--f-display);font-stretch:85%;font-weight
 .glabel.city .stk{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .glabel.city .stk .pm{position:absolute;left:0;top:0;opacity:1}
 .glabel.city.grp > span > .pm{position:relative;z-index:1}
+
+/* Boarding: the pass is shown, the music waits for Board */
+#bar.boarding #bar-frame,#bar.boarding .bar-note{display:none}
+.pass-fields{grid-template-columns:1.3fr 1.3fr auto}
+.bar.boarding .pass{animation:pass-in .45s ease-out both}
+@keyframes pass-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* The captain's face on the boarding pass */
+.pass-fields .cap{display:flex;align-items:center;gap:6px;min-width:0}
+.pass-fields .cap img{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:none;border:1px solid rgba(243,238,228,.3);background:#efe7d5}
+.pass-fields .cap img[hidden]{display:none}
+.pass-fields .cap span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Departures board on arrival: split-flap times and codes, a dozen mixes listed like flights */
+.deps{position:absolute;right:calc(max(16px,env(safe-area-inset-right,0px)) + 64px);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;width:min(430px,calc(100vw - 32px));background:#0b0e13;color:#f3eee4;border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 18px 50px -16px rgba(0,0,0,.8);overflow:hidden;animation:feature-in .6s ease-out both}
+.deps-head{display:flex;align-items:center;gap:10px;padding:10px 12px 8px;border-bottom:1px solid rgba(255,255,255,.1);font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.22em;text-transform:uppercase;color:#f0b45e}
+.deps-clock{margin-left:auto;color:#f3eee4;letter-spacing:.1em}
+.deps-x{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:none;color:rgba(243,238,228,.7);font-size:16px;line-height:1;cursor:pointer}
+.deps-list{max-height:min(254px,38vh);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.dep-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px;width:100%;padding:8px 12px;background:none;border:0;border-bottom:1px solid rgba(255,255,255,.06);color:inherit;text-align:left;cursor:pointer;font:inherit}
+.dep-row:hover{background:rgba(240,180,94,.08)}
+.fl{display:inline-flex;gap:2px}
+.fl b{display:inline-block;width:13px;padding:3px 0 2px;text-align:center;font:700 12.5px/1 "IBM Plex Mono",ui-monospace,monospace;color:#f6efe2;background:linear-gradient(#22272f 0 49%,#14181e 51% 100%);border-radius:2px;box-shadow:inset 0 -1px 0 rgba(0,0,0,.5)}
+.dep-code b{color:#f0b45e}
+.dep-mix{display:flex;flex-direction:column;min-width:0}
+.dep-mix strong{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dep-mix small{font-size:11px;color:rgba(243,238,228,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dep-st{font:600 9.5px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.1em;color:rgba(243,238,228,.55)}
+.dep-row:first-child .dep-st{color:#0b0e13;background:#f0b45e;padding:3px 5px;border-radius:2px;animation:blink 1.6s steps(1) infinite}
+@keyframes blink{50%{opacity:.55}}
+#app.has-bar .deps{display:none}
+@media (max-width:640px){.deps{left:16px;right:16px;width:auto}.dep-st{display:none}.deps-list{max-height:30vh}}

@@ -563,14 +563,14 @@ function showPlaylist(id, autoplay){
       <div class="chips">${p.genres.map(g=>`<span class="chip">${esc(g)}</span>`).join("")}</div>
       <p class="desc">${esc(p.desc)}</p>
       <div class="actions">
-        <button class="btn primary" type="button" id="playThis">${on ? "Playing now" : "▶ Play this mix"}</button>
+        <button class="btn primary" type="button" id="playThis">${on ? "Playing now" : "Board ▶"}</button>
         <a class="btn" href="playlists/${p.slug || slugOf(p.title)}/">Playlist page</a>
         <a class="btn" href="#compiler-${p.by}">${esc(comp.name.split(" ")[0])}'s profile →</a>
       </div>
       ${p.mixcloud ? "" : `<p class="deck-note">Demo audio: Rhythm Passport Vol.1 by DJ Ni Mo stands in until this playlist's own Mixcloud link is added.</p>`}
     </div>`;
-  $("#playThis").onclick = () => { playMix(p); $("#playThis").textContent = "Playing now"; };
-  if(autoplay && !(current && current.id === p.id)){ playMix(p); $("#playThis").textContent = "Playing now"; }
+  $("#playThis").onclick = () => { BOARDING = null; $("#bar-show").textContent = "Show on globe"; $("#bar-show").classList.remove("primary"); playMix(p); $("#playThis").textContent = "Playing now"; };
+  if(autoplay && !(current && current.id === p.id)) boardingPass(p);
 }
 function closePanel(){
   $("#panel").hidden = true; app.classList.remove("is-open");
@@ -1191,7 +1191,32 @@ function windingLine(a, b){
   return pts;
 }
 let BASEPATHS = BORDERS, ROUTEPATHS = [];
-function setPaths(){ world.pathsData(BASEPATHS.concat(ROUTEPATHS)); }
+let TRIPPATHS = [];
+function setPaths(){ world.pathsData(BASEPATHS.concat(TRIPPATHS, ROUTEPATHS)); }
+/* The visitor's own journey, kept in their browser: a dotted line from each place they boarded to the next */
+const TRIP_KEY = PASS_KEY + "-trip";
+let TRIP = [];
+try { TRIP = JSON.parse(localStorage.getItem(TRIP_KEY) || "null"); } catch(e){ TRIP = null; }
+if(!Array.isArray(TRIP)) TRIP = Object.entries(MYPASS).sort((a, b) => a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0).map(e => e[0]);
+TRIP = TRIP.filter(c => CITIES.some(x => x.city === c));
+function addToTrip(city){
+  if(TRIP[TRIP.length - 1] === city) return;
+  TRIP.push(city); if(TRIP.length > 60) TRIP = TRIP.slice(-60);
+  try { localStorage.setItem(TRIP_KEY, JSON.stringify(TRIP)); } catch(e){}
+  drawTrip();
+}
+function drawTrip(){
+  TRIPPATHS = [];
+  for(let i = 1; i < TRIP.length; i++){
+    const a = CITIES.find(x => x.city === TRIP[i - 1]), b = CITIES.find(x => x.city === TRIP[i]); if(!a || !b || a === b) continue;
+    const ip = d3.geoInterpolate([a.lon, a.lat], [b.lon, b.lat]), deg = d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 180 / Math.PI || 1;
+    const n = Math.max(12, Math.ceil(deg / 1.5)), line = d3.range(n + 1).map(k => { const q = ip(k / n); return [q[0], q[1], 0.0035]; });
+    line.color = "rgba(163,48,43,0.85)"; line.stroke = 1.9; line.dash = 0.9 / deg; line.gap = 1.1 / deg;
+    TRIPPATHS.push(line);
+  }
+  setPaths();
+}
+setTimeout(drawTrip, 0);
 // Draw the route: a railway or a road for land, a dotted line for sea and air
 function drawRoute(a, b, mode, given){
   let line = null; ROUTEPATHS = [];
@@ -1269,20 +1294,40 @@ function flyPlane(a, b){
   if(FLIGHT.mode !== "plane") flip = -flip;                    // the train, bus and ship emoji face left
   PLANE.style.transform = `translate(${s1.x}px, ${s1.y}px) rotate(${ang}deg) scale(${sc * flip}, ${sc})`;
 })();
+/* The boarding pass for a mix: route, flight, mix, the captain with their face, flight time */
+function fillPass(p){
+  const comp = COMPILERS[p.by] || {name: ""}, home = visitorCity(), dest = CITIES.find(x => x.city === p.city);
+  $("#bar-art").innerHTML = stamp(p, 44); $("#bar-title").textContent = p.title;
+  $("#bp-from").textContent = home.code; $("#bp-fromc").textContent = home.name;
+  $("#bp-to").textContent = dest ? dest.code : code3(p.city); $("#bp-toc").textContent = p.city;
+  $("#bp-flight").textContent = "Flight RP " + String(hash(p.id) % 9000 + 1000);
+  $("#bp-captain").textContent = comp.name + (p.mixcloud || p.spotify ? "" : " · demo audio");
+  const face = $("#bp-face"); if(face){ if(comp.photo){ face.src = comp.photo; face.hidden = false; } else face.hidden = true; }
+  $("#bp-time").textContent = durLabel(p.dur);
+}
+/* 3. Tapping a stamp gives the boarding pass first; the music starts when the visitor presses Board */
+let BOARDING = null;
+function boardingPass(p){
+  if(current) return;             // something is already playing: the panel's Board button switches flights
+  BOARDING = p; fillPass(p);
+  const bar = $("#bar"); bar.classList.add("boarding"); bar.hidden = false; app.classList.add("has-bar");
+  $("#bar-show").textContent = "Board ▶"; $("#bar-show").classList.add("primary");
+  requestAnimationFrame(() => { app.style.setProperty("--barh", bar.offsetHeight + "px"); });
+}
 function playMix(p){
   const to = CITIES.find(x => x.city === p.city);
   const from = (TRAIL && TRAIL !== to) ? TRAIL : current ? CITIES.find(x => x.city === current.city) : (CITIES.find(x => x.city === "London") || null);
   if(to) TRAIL = to;
   if(from && to && from !== to){ if(!introOn) flyPlane(from, to); else { const pl = planRoute(from, to); ROUTE = { from, to, mode: pl.mode }; drawRoute(from, to, pl.mode, pl.line); } }
-  current = p;
-  const bar = $("#bar");
+  current = p; addToTrip(p.city);
+  const bar = $("#bar"); bar.classList.remove("boarding");
   $("#bar-art").innerHTML = stamp(p, 44);
   $("#bar-title").textContent = p.title;
   const home = visitorCity(), dest = CITIES.find(x => x.city === p.city);
   $("#bp-from").textContent = home.code; $("#bp-fromc").textContent = home.name;
   $("#bp-to").textContent = dest ? dest.code : code3(p.city); $("#bp-toc").textContent = p.city;
   $("#bp-flight").textContent = "Flight RP " + String(hash(p.id) % 9000 + 1000);
-  $("#bp-captain").textContent = COMPILERS[p.by].name + (p.mixcloud || p.spotify ? "" : " · demo audio");
+  fillPass(p);
   $("#bp-time").textContent = durLabel(p.dur);
   addPassStamp(p.city);
   $("#bar-frame").src = (!p.mixcloud && p.spotify) ? p.spotify + "?utm_source=generator&theme=0" : `https://player-widget.mixcloud.com/widget/iframe/?hide_cover=1&mini=1&autoplay=1&feed=${encodeURIComponent(p.mixcloud || DEMO_FEED)}`;
@@ -1293,6 +1338,7 @@ function playMix(p){
   d.armTarget = rNeedle(Math.max(0.15, rRing(p.lat)/RU));
 }
 $("#bar-show").onclick = () => {
+  if(BOARDING && !current){ const p = BOARDING; BOARDING = null; $("#bar-show").textContent = "Show on globe"; $("#bar-show").classList.remove("primary"); playMix(p); const b = $("#playThis"); if(b) b.textContent = "Playing now"; return; }
   if(!current) return;
   if(introOn) enterGlobe(DECKS.find(x => x.side === (current.lat >= 0 ? "A" : "B")));
   setTimeout(() => openCity(current.city, current.id), introOn ? 2400 : 0);
@@ -1312,27 +1358,47 @@ function visitorCity(){
   const name = (tz.split("/").pop() || "Home").replace(/_/g, " ");
   return {name, code: code3(name) || "HOM"};
 }
-/* On arrival, with nothing asked for in the address: after a moment the globe turns slowly to one mix
-   from the visitor's half of the world and a card offers to play it, so nobody misses the boarding pass. */
+/* On arrival, with nothing asked for in the address: a departures board with a dozen mixes listed like flights,
+   the first one boarding. The globe turns slowly to it. Tapping a row gives its boarding pass; Board starts the music. */
 function featureOnArrival(){
   if(location.hash || introOn || isOpen() || current) return;
-  const sd = visitorSide(), pool = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0), list = pool.length ? pool : PLAYLISTS;
-  const p = list[Math.floor(Math.random() * list.length)]; if(!p) return;
-  const by = COMPILERS[p.by] ? COMPILERS[p.by].name : "";
-  const card = document.createElement("div"); card.className = "feature"; card.setAttribute("role", "region"); card.setAttribute("aria-label", "Featured mix");
-  card.innerHTML = `<div class="feature-text"><span class="feature-eyebrow">Now boarding · ${esc(p.city)}</span><strong>${esc(p.title)}</strong><small>${esc(by)}${p.dur ? " · " + durLabel(p.dur) : ""}</small></div>
-    <button class="feature-play btn primary small" type="button">▶ Play</button><button class="feature-x" type="button" aria-label="Close">×</button>`;
-  const h = $("#hint"), hv = h && !h.hidden; app.appendChild(card); if(h) h.hidden = true;
-  const gone = () => { card.remove(); };
-  card.querySelector(".feature-x").onclick = () => { gone(); if(hv && !current) h.hidden = false; };
-  card.querySelector(".feature-play").onclick = () => { gone(); openCity(p.city, p.id); playMix(p); };
+  const sd = visitorSide(), mine = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0), rest = PLAYLISTS.filter(p => !mine.includes(p));
+  const shuffle = a => a.map(x => [Math.random(), x]).sort((u, v) => u[0] - v[0]).map(x => x[1]);
+  const list = shuffle(mine).concat(shuffle(rest)).slice(0, 12); if(!list.length) return;
+  const now = new Date(), t0 = Math.ceil((now.getHours() * 60 + now.getMinutes() + 3) / 5) * 5;
+  const hhmm = m => { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+  const flap = (txt, cls = "") => `<span class="fl ${cls}">${[...txt].map((ch, i) => `<b data-c="${esc(ch)}" style="--d:${i * 45}ms">${ch === " " ? "&nbsp;" : esc(ch)}</b>`).join("")}</span>`;
+  const rows = list.map((p, i) => { const dest = CITIES.find(x => x.city === p.city), comp = COMPILERS[p.by] || {name: ""};
+    return `<button class="dep-row" type="button" data-id="${p.id}" style="--r:${i}">
+      ${flap(hhmm(t0 + i * 10), "dep-time")}${flap((dest ? dest.code : code3(p.city)).padEnd(3, " "), "dep-code")}
+      <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${esc(p.city)} · Capt. ${esc(comp.name)}</small></span>
+      <span class="dep-st">${i === 0 ? "BOARDING" : i < 3 ? "ON TIME" : "SCHEDULED"}</span></button>`; }).join("");
+  const board = document.createElement("section"); board.className = "deps"; board.setAttribute("aria-label", "Departures");
+  board.innerHTML = `<div class="deps-head"><span>Departures</span><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
+  app.appendChild(board); const h = $("#hint"), hv = h && !h.hidden; if(h) h.hidden = true;
+  // the split-flap letters riffle through the alphabet before they settle
+  if(!reduce){
+    // one animation loop for every letter: each riffles until its own moment, then shows its real character
+    const abc = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", t0 = performance.now(), cells = [...board.querySelectorAll(".fl b")].filter(b => b.dataset.c !== " ")
+      .map((b, j) => ({b, end: b.dataset.c, at: 250 + j * 38 + Math.random() * 260, last: 0}));
+    const tick = now => { let busy = false;
+      for(const c of cells){ if(c.done) continue; const t = now - t0;
+        if(t >= c.at){ c.b.textContent = c.end; c.done = true; continue; }
+        busy = true; if(now - c.last > 55){ c.last = now; c.b.textContent = abc[Math.floor(Math.random() * abc.length)]; } }
+      if(busy && board.isConnected) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+  const gone = () => board.remove();
+  board.querySelector(".deps-x").onclick = () => { gone(); if(hv && !current) h.hidden = false; };
+  board.querySelectorAll(".dep-row").forEach(r => r.onclick = () => { const p = byId(r.dataset.id); openCity(p.city, p.id); boardingPass(p); });
+  const p = list[0];
   if(!reduce){
     lastInteract = performance.now() + 7000;   // hold the idle spin while the globe turns
     const pov = world.pointOfView();
     world.pointOfView({lat: Math.max(-50, Math.min(55, p.lat)) * 0.7, lng: p.lon, altitude: Math.max(1.5, Math.min(pov.altitude, 2.1))}, 6500);
   }
-  // the card goes once the visitor opens something or starts playing
-  const watch = setInterval(() => { if(current || isOpen()){ gone(); clearInterval(watch); } }, 500);
+  // the board steps aside once the visitor boards a flight
+  const watch = setInterval(() => { if(current){ gone(); clearInterval(watch); } }, 500);
 }
 setTimeout(featureOnArrival, 2200);
 function startLanding(){

@@ -49,7 +49,7 @@ const COUNTRY = LO.map((f,i) => {
 const countryByName = new Map(COUNTRY.map(c=>[c.name,c]));
 
 const CITIES = d3.groups(PLAYLISTS, p=>p.city).map(([city, items]) => {
-  const c = {city, items, lat:items[0].lat, lon:items[0].lon, country:items[0].country, tz:items[0].tz, code:items[0].code};
+  const c = {city, items, lat:items[0].lat, lon:items[0].lon, country:items[0].country, tz:items[0].tz, code:items[0].code, whole:!!items[0].whole};
   c.ci = countryByName.get(c.country) || COUNTRY.find(k => d3.geoContains(k.feat, [c.lon, c.lat])) || null;
   return c;
 });
@@ -75,9 +75,24 @@ for(const f of LO){ const polys = f.g.type === "Polygon" ? [f.g.coordinates] : f
 /* Every country and territory gets a name; smaller ones appear as you zoom in */
 const COUNTRY_LABELS = LABEL_PTS.map(p => {
   const name = nice(p.n), c = COUNTRY.find(k => k.raw === p.n) || {name, raw:p.n, lat:p.lat, lon:p.lon, main:p.a, code:code3(name), feat:null};
-  return {kind:"country", c, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
+  // a mix for the whole country: the country name itself becomes the stamp
+  const whole = CITIES.find(x => x.whole && x.ci && x.ci.raw === p.n) || null;
+  return {kind:"country", c, whole, lat:p.lat, lng:p.lon, a:p.a, text:name.toUpperCase()};
 }).sort((x, y) => y.a - x.a);
-const CITY_LABELS = CITIES.map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
+const CITY_LABELS = CITIES.filter(c => !c.whole).map(c => ({kind:"city", c, lat:c.lat, lng:c.lon, text:c.city}));
+/* The biggest stamp-shaped box (in degrees) around the label point that stays inside the country */
+function fitBox(d){
+  const f = d.c && d.c.feat; if(!f) return {hw: 0.6};
+  const cl = Math.max(0.2, Math.cos(d.lat * Math.PI / 180)), inside = hw => {
+    const hh = hw * cl * (d.aspect || 0.56);
+    for(let i = 0; i <= 6; i++){ const t = -1 + i / 3;
+      if(!d3.geoContains(f, [d.lng + t*hw, d.lat + hh]) || !d3.geoContains(f, [d.lng + t*hw, d.lat - hh]) ||
+         !d3.geoContains(f, [d.lng + hw, d.lat + t*hh]) || !d3.geoContains(f, [d.lng - hw, d.lat + t*hh])) return false; }
+    return true;
+  };
+  let lo = 0, hi = 25; for(let i = 0; i < 14; i++){ const m = (lo + hi) / 2; if(inside(m)) lo = m; else hi = m; }
+  return {hw: Math.max(lo, 0.3)};
+}
 function hasStamp(city){ try { return !!MYPASS[city]; } catch(e){ return false; } }
 function labelEl(d){
   if(d.el) return d.el;
@@ -85,12 +100,39 @@ function labelEl(d){
   el.className = "glabel " + d.kind; s.textContent = d.kind === "city" ? d.text : d.text.toLowerCase();
   if(d.kind === "city"){
     const rot = (((d.c.lat * 7 + d.c.lon * 3) % 16 + 16) % 16 - 8).toFixed(0);
-    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)"><circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text></svg>`);
-    const ink = inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
+    // the pin takes the shape and ink of its country's real entry stamp, when we have it
+    const real = window.WORSTAMP && WORSTAMP.pin(d.c.country, d.c.code);
+    s.insertAdjacentHTML("afterbegin", `<svg class="pm" viewBox="0 0 30 30" style="transform:rotate(${rot}deg)">${real ? real.svg : `<circle cx="15" cy="15" r="14.7" class="halo"/><circle cx="15" cy="15" r="13" class="o"/><circle cx="15" cy="15" r="9.6" class="i"/><text x="15" y="18.3" text-anchor="middle">${esc(d.c.code)}</text>`}</svg>`);
+    const ink = real ? real.ink : inkFor(d.c.city); s.style.setProperty("--ink", ink); s.style.setProperty("--ink-tint", ink + "2e");
     if(hasStamp(d.c.city)) el.classList.add("got");
     s.insertAdjacentHTML("beforeend", '<b class="cnt"></b>');
   }
   if(d.kind === "country") s.style.fontSize = (Math.max(9, Math.min(12, 8.5 + Math.sqrt(d.a)*16))).toFixed(1) + "px";
+  if(d.kind === "country" && d.whole){
+    el.classList.add("whole"); const ink = inkFor(d.whole.city); s.style.setProperty("--ink", ink);
+    d.rot = (((d.lat * 7 + d.lng * 3) % 8 + 8) % 8 - 4).toFixed(0); s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg)`;
+    const n = d.whole.items.length;
+    // the stamp is sized to fit inside its own country (see tidyLabels); when the country is too small on screen, the plain name shows instead
+    const label = `${esc(d.whole.city)}, ${n} mix${n > 1 ? "es" : ""}`, small = `${n} MIX${n > 1 ? "ES" : ""}`;
+    const real = window.WORSTAMP && WORSTAMP.draw(d.whole.country, {id: "gl" + hash(d.whole.city), city: d.whole.city, code: d.whole.code, whole: true, name: d.whole.city, small}, true);
+    if(real){
+      // the country's own entry stamp, after the real ones: shape, ink, lettering
+      el.classList.add("real"); d.nat = 56; d.aspect = real.h / real.w;
+      s.innerHTML = `<svg viewBox="0 0 ${real.w} ${real.h}" width="56" height="${(56 * real.h / real.w).toFixed(1)}" aria-label="${label}">${real.body}</svg><em>${esc(d.text)}</em>`;
+      // a paper card in the stamp's own outline, so the ink reads on any map
+      const sv = s.querySelector("svg"), outer = sv.querySelector("g > :first-child");
+      if(outer){ const u = outer.cloneNode(); u.setAttribute("class", "paper"); u.removeAttribute("stroke-dasharray"); sv.insertBefore(u, sv.firstChild); }
+    } else {
+      d.nat = 50; d.aspect = 0.56;
+      const nm = esc(plain(d.whole.city).toUpperCase()), fit = nm.length > 6 ? ` textLength="72" lengthAdjust="spacingAndGlyphs"` : "";
+      s.innerHTML = `<svg viewBox="0 0 100 56" width="50" height="28" aria-label="${label}">
+      <path class="paper" d="M8 2H92L98 8V48L92 54H8L2 48V8Z"/>
+      <g fill="none" stroke="${ink}"><path d="M8 2H92L98 8V48L92 54H8L2 48V8Z" stroke-width="3.4"/><path d="M10 7H90L93 10V46L90 49H10L7 46V10Z" stroke-width="1"/></g>
+      <text x="50" y="31" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="20" letter-spacing="1"${fit} fill="${ink}">${nm}</text>
+      <text x="50" y="45" text-anchor="middle" font-family="IBM Plex Mono,ui-monospace,monospace" font-weight="600" font-size="12" letter-spacing=".2" fill="${ink}">${small}</text></svg><em>${esc(d.text)}</em>`;
+    }
+    if(hasStamp(d.whole.city)) el.classList.add("got");
+  }
   let down = null;
   s.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
   s.addEventListener("click", e => { e.stopPropagation(); labelClickAt = performance.now();
@@ -99,7 +141,7 @@ function labelEl(d){
       const ms = d.members, lat = d3.mean(ms, m => m.c.lat), lng = d3.mean(ms, m => m.c.lon);
       world.pointOfView({ lat, lng, altitude: Math.max(0.12, world.pointOfView().altitude * 0.45) }, 900); return;
     }
-    d.kind === "city" ? openCity(d.c.city) : openCountry(d.c); });
+    d.kind === "city" ? openCity(d.c.city) : d.whole ? openCity(d.whole.city) : openCountry(d.c); });
   for(const t of ["pointerup", "mouseup"]) s.addEventListener(t, e => { labelClickAt = performance.now(); });
   el.appendChild(s); d.el = el; return el;
 }
@@ -249,7 +291,7 @@ function refreshLabels(){
   const alt = world.pointOfView().altitude, key = Math.round(Math.log2(alt)*5);
   if(key === labelKey) return; labelKey = key;
   const minA = 0.0022*alt*alt; // country names show from about 300,000 km² at the opening view
-  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA), ...CITY_LABELS]);
+  world.htmlElementsData([...COUNTRY_LABELS.filter(l => l.a >= minA || l.whole), ...CITY_LABELS]);
   const f = Math.max(0.1, Math.min(1, alt/1.85));
   world.pointRadius(d => (0.2 + 0.09*Math.sqrt(d.items.length))*f);
   world.ringMaxRadius(d => (1.1 + 0.35*Math.sqrt(d.items.length))*f);
@@ -283,8 +325,8 @@ function overlaps(b, list){ for(const o of list){ if(b[0] < o[2] && b[2] > o[0] 
 function tidyLabels(){
   const data = world.htmlElementsData(); if(!data || !data.length) return;
   const pov = world.pointOfView(), centre = [pov.lng, pov.lat], placed = [], horizon = Math.acos(1/(1 + pov.altitude)) - 0.1;
-  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.a;
-  const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [];
+  const rank = x => x.kind === "city" ? 1e9 + (x.c === activeCity ? 1e6 : 0) + x.c.items.length : x.whole ? 1e8 + (x.whole === activeCity ? 1e6 : 0) + x.a : x.a;
+  const order = [...data].sort((x, y) => rank(x) < rank(y) ? 1 : -1), heads = [], stamps = [];
   for(const d of order){
     const s = d.el && d.el.firstChild; if(!s) continue;
     let show = d3.geoDistance([d.lng, d.lat], centre) < horizon;
@@ -300,6 +342,21 @@ function tidyLabels(){
       else {
         /* A country name that would sit on a city label or a bigger neighbour's name slides up or down a little instead of vanishing */
         show = false;
+        /* A whole-country stamp is printed inside its own country: it grows and shrinks with the country on screen,
+           never past 55px, and below a legible size it turns back into the plain country name */
+        if(d.whole){
+          if(!d.fit) d.fit = fitBox(d);
+          const L = world.getScreenCoords(d.lat, d.lng - d.fit.hw, 0.006), R = world.getScreenCoords(d.lat, d.lng + d.fit.hw, 0.006);
+          const k = Math.min(1, Math.hypot(R.x - L.x, R.y - L.y) / (d.nat || 50)), mini = k < 0.72 && d.whole !== activeCity, kk = mini ? 1 : Math.max(0.72, k);
+          if(d.mini !== mini){ d.mini = mini; d.el.classList.toggle("mini", mini); s.style.transform = ""; d.k = null; d.w = s.offsetWidth; d.h = s.offsetHeight; }
+          if(!mini && (d.k == null || Math.abs(d.k - kk) > 0.02)){ d.k = kk; s.style.transform = `translate(-50%,-50%) rotate(${d.rot}deg) scale(${kk.toFixed(2)})`; }
+          if(!mini){
+            const b = [x - d.w*kk/2, y - d.h*kk/2, x + d.w*kk/2, y + d.h*kk/2];
+            if(!overlaps(b, stamps) || d.whole === activeCity){ stamps.push(b); placed.push(b); s.style.top = "0px"; show = true; }
+            s.style.visibility = show ? "visible" : "hidden"; continue;
+          }
+          if(mini && !s.style.transform) s.style.transform = "translate(-50%,-50%)";
+        }
         for(const o of [0, -1.25, 1.25, -2.5, 2.5]){
           const dy = o*d.h, b = [x - d.w/2, y - d.h/2 + dy, x + d.w/2, y + d.h/2 + dy];
           if(!overlaps(b, placed)){ placed.push(b); s.style.top = dy + "px"; show = true; break; }
@@ -448,9 +505,9 @@ function openCity(city, playlistId){
   openPanel(`
     <div class="panel-head">
       <div>
-        <div class="visa-top"><span>Visa · ${iso3(c.country)}</span><span>No. ${c.code} ${String(c.items.length).padStart(4, "0")}</span></div>
+        <div class="visa-top"><span>${c.whole ? "Country visa" : "Visa"} · ${iso3(c.country)}</span><span>No. ${c.code} ${String(c.items.length).padStart(4, "0")}</span></div>
         <h2>${esc(c.city)}</h2>
-        <div class="where">${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">${esc(c.country)}</button>` : `<span>${esc(c.country)}</span>`}<span>${coord(c.lat,c.lon)}</span>${lt ? `<span>Local time ${lt}</span>` : ""}</div>
+        <div class="where">${c.whole ? `<span>The whole country</span>${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">Country guide</button>` : ""}` : `${c.ci ? `<button class="crumb" type="button" data-country="${esc(c.ci.name)}">${esc(c.country)}</button>` : `<span>${esc(c.country)}</span>`}<span>${coord(c.lat,c.lon)}</span>`}${lt ? `<span>Local time ${lt}</span>` : ""}</div>
       </div>
       <button class="close" type="button" aria-label="Close">×</button>
     </div>
@@ -510,16 +567,37 @@ function inkFor(city){
   if(!INK_OF.size) [...CITIES].sort((a, b) => a.lon - b.lon).forEach((c, i) => INK_OF.set(c.city, INKS[i % INKS.length]));
   return INK_OF.get(city) || INKS[(hash(plain(city)) >>> 3) % INKS.length];
 }
+/* A country entry stamp: wide, cut corners, double frame, the country's name large.
+   Used for whole-country mixes so they never look like a town. */
+function countryStampBody(col, name, top, bottom){
+  const M = `font-family="IBM Plex Mono,ui-monospace,monospace"`, B = `font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700"`;
+  const n = esc(plain(name).toUpperCase()), fit = n.length > 8 ? ` textLength="66" lengthAdjust="spacingAndGlyphs"` : "";
+  return `
+      <path d="M15 21H85L95 31V69L85 79H15L5 69V31Z" fill="none" stroke="${col}" stroke-width="3.6"/>
+      <path d="M17.5 25.5H82.5L90.5 33.5V66.5L82.5 74.5H17.5L9.5 66.5V33.5Z" fill="none" stroke="${col}" stroke-width="1"/>
+      <text x="50" y="34.5" text-anchor="middle" ${M} font-size="5.2" font-weight="600" letter-spacing="1.6" fill="${col}">${top}</text>
+      <path d="M16 38.5H84" stroke="${col}" stroke-width=".9"/>
+      <text x="50" y="56" text-anchor="middle" ${B} font-size="${n.length > 8 ? 15 : 18}" letter-spacing="1.8"${fit} fill="${col}">${n}</text>
+      <path d="M16 61H84" stroke="${col}" stroke-width=".9"/>
+      <path d="M19 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4" fill="none" stroke="${col}" stroke-width="1.1"/>
+      <text x="52" y="69.4" text-anchor="middle" ${M} font-size="5" font-weight="600" letter-spacing=".8" fill="${col}">${bottom}</text>
+      <path d="M74 67.6h7m-2.4-2.4 2.4 2.4-2.4 2.4" fill="none" stroke="${col}" stroke-width="1.1"/>`;
+}
 function stamp(p, size=104){
-  const h = hash(p.id), r = rng(h), rot = (r()*18 - 9).toFixed(1), v = h % 3;
+  const h = hash(p.id), r = rng(h), rot = (r()*18 - 9).toFixed(1) * (p.whole ? 0.5 : 1), v = h % 3;
   const col = inkFor(p.city);
   const d = new Date(p.added + "T12:00:00Z");
   const date = `${String(d.getUTCDate()).padStart(2,"0")} ${["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   const uid = "s" + hash(p.id + size), city = esc(plain(p.city).toUpperCase());
   const who = p.by && COMPILERS[p.by] ? esc(plain(COMPILERS[p.by].name).toUpperCase()) : (p.who ? esc(p.who) : "RHYTHM PASSPORT");
   const M = `font-family="IBM Plex Mono,ui-monospace,monospace"`, B = `font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="600"`;
+  const real = window.WORSTAMP && WORSTAMP.draw(p.country, {id: uid, city: p.city, code: p.code, whole: p.whole, added: p.added});
+  if(real) return `<svg class="stamp" viewBox="0 0 100 100" width="${size}" height="${size}" aria-hidden="true">
+    <rect width="100" height="100" rx="9" fill="#efe7d5"/>
+    <g transform="rotate(${rot} 50 50) translate(${(100 - real.w*0.92)/2} ${(100 - real.h*0.92)/2}) scale(.92)" filter="url(#rp-ink)" opacity=".9">${real.body}</g></svg>`;
   let body;
-  if(v === 0) body = `
+  if(p.whole) body = countryStampBody(col, p.city, "ENTRY · " + iso3(p.country || p.city), date);
+  else if(v === 0) body = `
       <circle cx="50" cy="50" r="40" fill="none" stroke="${col}" stroke-width="3.2"/>
       <circle cx="50" cy="50" r="33" fill="none" stroke="${col}" stroke-width="1.2"/>
       <path id="${uid}a" d="M50 50 m-36.5 0 a36.5 36.5 0 1 1 73 0" fill="none"/>
@@ -574,7 +652,7 @@ function addPassStamp(city){
   passCount();
   const c = CITIES.find(x => x.city === city), t = $("#toast");
   if(!c || !t) return;
-  t.innerHTML = `${stamp({id:"me-" + city, city, code:c.code, added:MYPASS[city], who:"YOUR PASSPORT"}, 52)}<div><strong>Stamped: ${esc(city)}</strong><small>${passCount()} of ${CITIES.length} places in your passport</small></div>`;
+  t.innerHTML = `${stamp({id:"me-" + city, city, code:c.code, country:c.country, whole:c.whole, added:MYPASS[city], who:"YOUR PASSPORT"}, 52)}<div><strong>Stamped: ${esc(city)}</strong><small>${passCount()} of ${CITIES.length} places in your passport</small></div>`;
   t.hidden = false; t.classList.remove("out");
   clearTimeout(addPassStamp.t); addPassStamp.t = setTimeout(() => { t.classList.add("out"); setTimeout(() => { t.hidden = true; }, 450); }, 3200);
 }
@@ -592,7 +670,7 @@ function openPassport(){
     </div>
     <div class="panel-body">
       <div class="pass-count"><div><span class="label">Places</span><strong>${got.length}<small style="font-size:13px;color:var(--muted)"> / ${CITIES.length}</small></strong></div><div><span class="label">Countries</span><strong>${countries}</strong></div></div>
-      ${got.length ? `<div class="stamps-grid">${got.map(c => `<button class="stampcard" type="button" data-city="${esc(c.city)}">${stamp({id:"me-" + c.city, city:c.city, code:c.code, added:MYPASS[c.city], who:"YOUR PASSPORT"}, 120)}<small>${esc(c.city)}<br>${dateLabel(MYPASS[c.city])}</small></button>`).join("")}</div>`
+      ${got.length ? `<div class="stamps-grid">${got.map(c => `<button class="stampcard" type="button" data-city="${esc(c.city)}">${stamp({id:"me-" + c.city, city:c.city, code:c.code, country:c.country, whole:c.whole, added:MYPASS[c.city], who:"YOUR PASSPORT"}, 120)}<small>${esc(c.city)}<br>${dateLabel(MYPASS[c.city])}</small></button>`).join("")}</div>`
         : `<div class="empty"><strong>No stamps yet</strong><p>Play a mix or playlist from any place and it gets stamped here.</p></div>`}
       ${left.length ? `<div><div class="label" style="margin-bottom:10px">Still to visit</div><div class="stamps-grid">${left.map(c => `<button class="stampcard empty-slot" type="button" data-city="${esc(c.city)}"><span class="slot">${esc(c.city)}</span></button>`).join("")}</div></div>` : ""}
       <p class="deck-note">Stamps are kept in this browser only.</p>

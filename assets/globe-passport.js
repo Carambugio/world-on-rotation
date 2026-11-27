@@ -349,8 +349,25 @@ world.ringsData([]).ringLat("lat").ringLng("lon").ringAltitude(0.0028)
   for(let i = 0; i < 900; i++){ const x = rnd()*w, y = rnd()*h, m = rnd(), r = m > .985 ? 1.3 : m > .9 ? .85 : .5;
     g.fillStyle = `rgba(${225 + rnd()*30|0},${225 + rnd()*25|0},255,${(.15 + rnd()*.55) * (r > 1 ? 1 : .8)})`; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
   const v = document.getElementById("globeViz");
+  if(WOR.page){
+    // a passport visa page: paper, fine guilloche waves, a printed border; the globe sits on it like an illustration
+    const q = document.createElement("canvas"), W = 1200, H = 800; q.width = W; q.height = H; const k = q.getContext("2d");
+    k.fillStyle = "#eee5d0"; k.fillRect(0, 0, W, H);
+    for(let i = 0; i < 26000; i++){ k.fillStyle = `rgba(120,100,70,${rnd()*0.05})`; k.fillRect(rnd()*W, rnd()*H, 1, 1); }
+    k.lineWidth = 0.7;
+    for(let band = 0; band < 2; band++) for(let j = 0; j < 36; j++){
+      k.strokeStyle = band ? "rgba(49,108,107,0.10)" : "rgba(163,48,43,0.07)"; k.beginPath();
+      for(let x = 0; x <= W; x += 6){ const y = H * (band ? 0.72 : 0.3) + Math.sin(x / (70 + j * 1.3) + j * 0.45) * (40 + j * 2.2) + Math.sin(x / 23 + j) * 6; x ? k.lineTo(x, y) : k.moveTo(x, y); }
+      k.stroke();
+    }
+    v.style.backgroundImage = `radial-gradient(ellipse 75% 70% at 50% 50%, rgba(238,229,208,0) 55%, rgba(120,96,60,.22) 100%), url(${q.toDataURL()})`;
+    v.style.backgroundSize = "cover, 1200px 800px";
+    document.documentElement.classList.add("on-page");
+    world.atmosphereColor("#8a7650").atmosphereAltitude(0.06);
+  } else {
   v.style.backgroundImage = `url(${c.toDataURL()}), radial-gradient(ellipse 120% 90% at 50% 45%,#0b1a2c 0%,#060c16 45%,#020409 100%)`;
   v.style.backgroundSize = "1600px 1000px, cover";
+  }
   const it = document.getElementById("intro"); it.style.backgroundImage = v.style.backgroundImage; it.style.backgroundSize = v.style.backgroundSize;
 })();
 const ctl = world.controls();

@@ -1392,22 +1392,24 @@ function visitorCity(){
   const name = (tz.split("/").pop() || "Home").replace(/_/g, " ");
   return {name, code: code3(name) || "HOM"};
 }
-/* On arrival, with nothing asked for in the address: a departures board with a dozen mixes listed like flights,
-   the first one boarding. The globe turns slowly to it. Tapping a row gives its boarding pass; Board starts the music. */
+/* On arrival, with nothing asked for in the address: an arrivals board of the latest mixes, newest first, with the day
+   each one landed and its flight time. The globe turns slowly to the newest. Tapping a row gives its boarding pass. */
 function featureOnArrival(){
   if(location.hash || introOn || isOpen() || current) return;
-  const sd = visitorSide(), mine = PLAYLISTS.filter(p => sd === "A" ? p.lat >= 0 : p.lat < 0), rest = PLAYLISTS.filter(p => !mine.includes(p));
-  const shuffle = a => a.map(x => [Math.random(), x]).sort((u, v) => u[0] - v[0]).map(x => x[1]);
-  const list = shuffle(mine).concat(shuffle(rest)).slice(0, 12); if(!list.length) return;
+  const list = [...PLAYLISTS].sort((a, b) => (b.added || "").localeCompare(a.added || "") || a.title.localeCompare(b.title)).slice(0, 12); if(!list.length) return;
+  const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const landed = a => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(a || ""); return m ? m[3] + " " + MON[+m[2] - 1] : "-- ---"; };
+  const fresh = a => a && (Date.now() - new Date(a + "T12:00:00Z").getTime()) < 14 * 864e5;
+  const ftime = s => { const d = Math.round((s || 0) / 60); return Math.floor(d / 60) + "H" + String(d % 60).padStart(2, "0"); };   // seconds to 1H03
   const now = new Date(), hhmm = m => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
   const flap = (txt, cls = "") => `<span class="fl ${cls}">${[...txt].map((ch, i) => `<b data-c="${esc(ch)}" style="--d:${i * 45}ms">${ch === " " ? "&nbsp;" : esc(ch)}</b>`).join("")}</span>`;
   const rows = list.map((p, i) => { const dest = CITIES.find(x => x.city === p.city), comp = COMPILERS[p.by] || {name: ""};
     return `<button class="dep-row" type="button" data-id="${p.id}" style="--r:${i}">
-      ${flap(localTime(dest && dest.tz) || hhmm(((now.getUTCHours() * 60 + now.getUTCMinutes() + Math.round(p.lon / 15) * 60) % 1440 + 1440) % 1440), "dep-time")}${flap((dest ? dest.code : code3(p.city)).padEnd(3, " "), "dep-code")}
-      <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${styleTags(p).length ? `<em>${styleTags(p).slice(0, 2).map(esc).join(" · ")}</em> · ` : ""}${esc(p.city)}</small></span>
-      ${i === 0 ? `<span class="dep-st">BOARDING</span>` : ""}</button>`; }).join("");
-  const board = document.createElement("section"); board.className = "deps"; board.setAttribute("aria-label", "Departures");
-  board.innerHTML = `<div class="deps-head"><button class="deps-fold" type="button" aria-expanded="true">Departures <small>local time there</small><i aria-hidden="true">▾</i></button><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
+      ${flap(landed(p.added), "dep-time")}${flap((dest ? dest.code : code3(p.city)).padEnd(3, " "), "dep-code")}
+      <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${styleTags(p).length ? `<em>${styleTags(p).slice(0, 2).map(g => esc((styleOf(g) || {name: g}).name)).join(" · ")}</em> · ` : ""}${esc(p.city)}</small></span>
+      <span class="dep-len">${fresh(p.added) ? `<span class="dep-st">NEW</span>` : ""}<span>${ftime(p.dur)}</span></span></button>`; }).join("");
+  const board = document.createElement("section"); board.className = "deps"; board.setAttribute("aria-label", "Arrivals: the latest mixes");
+  board.innerHTML = `<div class="deps-head"><button class="deps-fold" type="button" aria-expanded="true">Arrivals <small>latest mixes</small><i aria-hidden="true">▾</i></button><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
   app.appendChild(board); const h = $("#hint"), hv = h && !h.hidden; if(h) h.hidden = true;
   // the split-flap letters riffle through the alphabet before they settle
   if(!reduce){

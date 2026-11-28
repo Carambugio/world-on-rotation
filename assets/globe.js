@@ -1409,7 +1409,8 @@ function featureOnArrival(){
       <span class="dep-mix"><strong>${esc(p.title)}</strong><small>${styleTags(p).length ? `<em>${styleTags(p).slice(0, 2).map(g => esc((styleOf(g) || {name: g}).name)).join(" · ")}</em> · ` : ""}${esc(p.city)}</small></span>
       <span class="dep-len">${fresh(p.added) ? `<span class="dep-st">NEW</span>` : ""}<span>${ftime(p.dur)}</span></span></button>`; }).join("");
   const board = document.createElement("section"); board.className = "deps"; board.setAttribute("aria-label", "Arrivals: the latest mixes");
-  board.innerHTML = `<div class="deps-head"><button class="deps-fold" type="button" aria-expanded="true">Arrivals <small>latest mixes</small><i aria-hidden="true">▾</i></button><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>`;
+  board.innerHTML = `<div class="deps-head"><button class="deps-fold" type="button" aria-expanded="true">Arrivals <small>latest mixes</small><i aria-hidden="true">▾</i></button><span class="deps-clock">${hhmm(now.getHours() * 60 + now.getMinutes())}</span><button class="deps-x" type="button" aria-label="Close">×</button></div><div class="deps-list">${rows}</div>
+    <div class="deps-foot"><button class="deps-up" type="button" aria-label="Earlier rows">▲</button><span class="deps-n"></span><button class="deps-down" type="button" aria-label="More arrivals">▼</button></div>`;
   app.appendChild(board); const h = $("#hint"), hv = h && !h.hidden; if(h) h.hidden = true;
   // the split-flap letters riffle through the alphabet before they settle
   if(!reduce){
@@ -1424,6 +1425,15 @@ function featureOnArrival(){
     requestAnimationFrame(tick);
   }
   const gone = () => board.remove();
+  // scrolling the board: arrows move it a row at a time, the counter says which rows are showing
+  const lst = board.querySelector(".deps-list"), rowH = () => (lst.querySelector(".dep-row") || {}).offsetHeight || 42;
+  const count = () => { const a = Math.round(lst.scrollTop / rowH()), vis = Math.max(1, Math.round(lst.clientHeight / rowH()));
+    board.querySelector(".deps-n").textContent = `${a + 1}–${Math.min(list.length, a + vis)} of ${list.length}`;
+    board.querySelector(".deps-up").disabled = lst.scrollTop < 2; board.querySelector(".deps-down").disabled = lst.scrollTop + lst.clientHeight > lst.scrollHeight - 2;
+    board.classList.toggle("more", lst.scrollTop + lst.clientHeight < lst.scrollHeight - 2); };
+  board.querySelector(".deps-up").onclick = () => lst.scrollBy({top: -rowH(), behavior: "smooth"});
+  board.querySelector(".deps-down").onclick = () => lst.scrollBy({top: rowH(), behavior: "smooth"});
+  lst.addEventListener("scroll", count, {passive: true}); requestAnimationFrame(count);
   // the board folds down to its title as soon as the visitor starts exploring the globe; tapping the title opens it again
   const fold = on => { board.classList.toggle("folded", on); board.querySelector(".deps-fold").setAttribute("aria-expanded", on ? "false" : "true"); };
   board.querySelector(".deps-fold").onclick = () => fold(!board.classList.contains("folded"));

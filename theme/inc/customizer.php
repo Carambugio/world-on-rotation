@@ -214,11 +214,17 @@ add_action( 'wp_head', 'wort_custom_css', 99 );
 
 /** Share image tags, on every page. */
 function wort_share_meta() {
+	// the image set in the Customizer, or the bundled one: the globe with the site's name, 1200 x 630
 	$img = get_theme_mod( 'wort_share_image', '' );
-	if ( $img ) {
-		echo '<meta property="og:image" content="' . esc_url( $img ) . '">' . "\n";
-		echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+	if ( ! $img ) {
+		$img = get_template_directory_uri() . '/assets/img/share.jpg?v=' . WORT_VERSION;
+		echo '<meta property="og:image:width" content="1200">' . "\n" . '<meta property="og:image:height" content="630">' . "\n";
 	}
+	echo '<meta property="og:image" content="' . esc_url( $img ) . '">' . "\n";
+	echo '<meta property="og:image:alt" content="' . esc_attr( 'A globe with mixes pinned to places, and the words World on Rotation' ) . '">' . "\n";
+	echo '<meta name="twitter:card" content="summary_large_image">' . "\n";
+	echo '<meta property="og:type" content="website">' . "\n";
+	echo '<meta property="og:url" content="' . esc_url( is_front_page() ? home_url( '/' ) : ( is_singular() ? get_permalink() : home_url( add_query_arg( array() ) ) ) ) . '">' . "\n";
 	echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo( 'name' ) ) . '">' . "\n";
 }
 add_action( 'wp_head', 'wort_share_meta', 3 );
